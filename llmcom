@@ -1,0 +1,105 @@
+#!/usr/bin/python3
+# EXP31 AgentWorkforce wrapper
+"""Bootstrap-capable CLI: --help and --skill work before Node is installed."""
+import sys
+sys.dont_write_bytecode = True
+import os
+from pathlib import Path
+import runpy
+friendly = globals().get('_LLMCOM_FRIENDLY', Path(sys.argv[0]).name == 'llmcom')
+
+source = Path(__file__).resolve().parent
+# Installed wrappers find their implementation outside ~/bin.
+if not (source / 'onboard.py').exists():
+    source = Path.home() / '.local/share/agentworkforce/stack'
+command = sys.argv[1] if len(sys.argv) > 1 else '--help'
+os.environ['PATH'] = str(Path.home() / '.local/share/agentworkforce/node/bin') + ':' + str(Path.home() / 'bin') + ':' + os.environ.get('PATH', '')
+if command == '--version':
+    print(('llmcom ' if friendly else 'awstack ') + (source / 'VERSION').read_text().strip())
+elif command in ['--help', '-h', 'help']:
+    if friendly:
+        print('''llmcom — live collaboration without leaving your warmed chat
+
+  /llmcom setup channel-A              Create the team's named channel
+  /llmcom join channel-A               Join as this chat; infer its renamed title
+
+The same commands work in a shell as `llmcom setup` / `llmcom join`.
+Join must run through the warmed chat's shell tool to capture its native address.
+
+  llmcom --skill                       Instructions for any LLM, even before installation
+  llmcom --version                     Installed CLI release
+  llmcom upgrade                       Apply this release to an existing stack and skills
+  llmcom install-skill                 Install /llmcom instructions for Claude and Codex
+  llmcom setup --help                  New Mac installation and channel options
+  llmcom join --help                   Name/title overrides and preview options
+  llmcom say channel-A TEXT            Message everyone in the channel
+  llmcom send CHAT TEXT                Direct message one chat
+  llmcom status | doctor | sessions    Show identities and diagnose delivery
+  llmcom repair --dry-run              Preview bounded repairs
+  llmcom verify | ack NONCE            Native receipt proof
+  llmcom leave                        Stop this chat's listener
+
+Install the CLI: uv tool install llmcom (or pipx install llmcom).
+Existing stack: uvx --from llmcom llmcom upgrade
+New teammate Mac:
+  llmcom setup channel-A --computer alice --ssh-host SERVER --credentials-file FILE
+Then use /llmcom join channel-A inside the existing chat.
+
+Claude join merges the authorized incoming-text config, preserving tool permission mode.
+Existing identities remain stable; new names use chat title, computer and session suffix.
+Channels share messages only with joined chats; your own posts are not echoed into you.
+Legacy `awstack` commands remain compatible. Current native adapters: Claude and Codex/macOS.
+''')
+        sys.exit(0)
+    print('''awstack — private live collaboration between existing Claude/Codex chats
+
+  awstack --skill                         Full instructions for any LLM
+  awstack onboard install --help          Install dependencies, tunnel, broker, MCP, skill
+  awstack onboard install ... --dry-run   Preview installation without writes
+  awstack doctor                         Read-only diagnostics; readiness ≠ live-chat proof
+  awstack repair --dry-run                Diagnose and print a bounded repair plan
+  awstack repair                         Repair named installation/service failures
+  awstack connect --help                 Join this warmed chat, or suggest inside-chat commands
+  awstack connect --dry-run              Show the exact join command and detected context
+  awstack authorize-claude --agent NAME   Merge authorization for one named Claude listener
+  awstack join NAME claude|codex          Direct native join from inside the conversation
+  awstack session-status | leave         Inspect or stop this conversation's listener
+  awstack sessions                       List chat identities and listener health, without secrets
+  awstack verify                         Probe native delivery; chat must acknowledge it
+  awstack ack NONCE                      Acknowledge a probe received automatically in this chat
+  awstack send PEER TEXT                  Send a DM; models decide whether to reply
+  awstack inbox | status                  Inspect messages or the private server
+  awstack onboard bundle --output FILE   Build a source-only onboarding kit, without credentials
+
+Quick install (from the unpacked kit, on a teammate's own Mac):
+  ./awstack onboard install --name alice --ssh-host bertha --credentials-file FILE
+Then, through the warmed conversation's shell tool:
+  ~/bin/awstack connect --name alice-codex --vendor codex
+For explicitly authorized Claude configuration and joining in one call:
+  ~/bin/awstack connect --name alice-claude --vendor claude --authorize-claude
+If Claude's agent permission check blocks that call, the user can execute the join
+inside that same chat with ! ~/bin/awstack join alice-claude claude.
+
+No commands here create a replacement model thread. Credentials are never printed.
+Current installer: macOS; SSH access and a private workspace key must already exist.
+''')
+elif command == '--skill':
+    for file in [source / ('LLMCOM-SKILL.md' if friendly else 'SKILL.md'), source / 'references/onboarding.md']:
+        print(file.read_text())
+elif command in ['upgrade', 'install-skill']:
+    sys.argv = [str(source / 'onboard.py')] + sys.argv[1:]
+    runpy.run_path(str(source / 'onboard.py'), run_name='__main__')
+elif friendly:
+    sys.path.insert(0, str(source))
+    sys.argv[0] = str(source / 'llmcom.py')
+    runpy.run_path(str(source / 'llmcom.py'), run_name='__main__')
+elif command in ['onboard', 'repair', 'connect', 'authorize-claude']:
+    arguments = sys.argv[2:] if command == 'onboard' else sys.argv[1:]
+    sys.argv = [str(source / 'onboard.py')] + arguments
+    runpy.run_path(str(source / 'onboard.py'), run_name='__main__')
+else:
+    node = Path.home() / '.local/share/agentworkforce/node/bin/node'
+    if not node.exists() or not (source / 'awstack.mjs').exists():
+        print('Runtime is not installed. Run ./awstack onboard install --help first.', file=sys.stderr)
+        sys.exit(1)
+    os.execv(str(node), [str(node), str(source / 'awstack.mjs')] + sys.argv[1:])

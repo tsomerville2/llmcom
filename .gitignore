@@ -1,0 +1,11 @@
+dist/
+src/llmcom/_stack/
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+.runtime/
+.agentworkforce/
+.trajectories/
+*.log
+.DS_Store

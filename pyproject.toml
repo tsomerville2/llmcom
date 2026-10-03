@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llmcom"
+version = "0.1.0"
+description = "Live text channels inside existing warmed Claude and Codex conversations."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "Travis Somerville"}]
+keywords = ["agents", "claude", "codex", "messaging", "relaycast", "macos"]
+classifiers = ["Development Status :: 3 - Alpha", "Environment :: Console", "Operating System :: MacOS", "Programming Language :: Python :: 3"]
+dependencies = []
+
+[project.scripts]
+llmcom = "llmcom.cli:main"
+awstack = "llmcom.cli:awstack"
+
+[project.urls]
+Homepage = "https://github.com/tsomerville2/llmcom"
+Repository = "https://github.com/tsomerville2/llmcom"
+Issues = "https://github.com/tsomerville2/llmcom/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/llmcom"]
+exclude = ["src/llmcom/_stack"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/llmcom/*.py", "pyproject.toml", "hatch_build.py", "README.md", "LICENSE", "VERSION", "awstack", "llmcom", "*.mjs", "*.py", "*SKILL.md", "package.json", "package-lock.json", "references/*.md", "flows/*.ts"]
+exclude = ["src/llmcom/_stack", "dist", "node_modules", "__pycache__"]
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "hatch_build.py"

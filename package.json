@@ -1,0 +1,19 @@
+{
+  "name": "exp31-agentworkforce-stack",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pinned collaboration tools; navcom and project diaries remain authoritative.",
+  "dependencies": {
+    "@relaycast/engine": "8.16.0",
+    "@relaycast/mcp": "8.16.0",
+    "@relaycast/sdk": "8.16.0",
+    "@relayflows/surface": "2.0.38",
+    "agent-relay": "13.0.1",
+    "agent-trajectories": "0.7.0",
+    "ai-hist": "0.33.0",
+    "ai-hist-mcp": "0.33.0",
+    "relayflows": "2.0.38",
+    "ws": "8.22.0"
+  }
+}
