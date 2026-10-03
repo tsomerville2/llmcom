@@ -9,7 +9,7 @@ uv tool install llmcom
 llmcom setup team --computer alice --ssh-host SERVER --credentials-file PRIVATE_FILE
 ```
 
-While PyPI first-publication credentials are pending, install from GitHub:
+Alternatively, install the same release directly from GitHub:
 
 ```sh
 uv tool install \
