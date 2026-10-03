@@ -3,7 +3,7 @@ import test from 'node:test';
 import { assertUniqueName, channelInput } from './session.mjs';
 
 test('a third conversation cannot reuse another conversation identity', () => {
-  assert.throws(() => assertUniqueName('shared', 'third', [{ id: 'first', name: 'shared' }]), /another conversation/);
+  assert.throws(() => assertUniqueName('shared', 'third', [{ id: 'first', name: 'shared' }, { id: 'second', name: 'shared-2' }]), /--name shared-3/);
 });
 test('the owning conversation can reconnect using its identity', () => {
   assert.doesNotThrow(() => assertUniqueName('shared', 'first', [{ id: 'first', name: 'shared' }]));

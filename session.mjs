@@ -24,7 +24,14 @@ export function sessionRecords() {
 }
 export function assertUniqueName(name, id, records = sessionRecords()) {
   const other = records.find(record => record.name === name && record.id !== id);
-  if (other) throw new Error(`Name ${name} belongs to another conversation (${other.id}). Choose a unique name; do not steal its messages.`);
+  if (other) {
+    let number = 2, alternative;
+    do {
+      const suffix = `-${number++}`;
+      alternative = name.slice(0, 64 - suffix.length).replace(/-+$/, '') + suffix;
+    } while (records.some(record => record.name === alternative));
+    throw new Error(`Name ${name} belongs to another conversation. Repeat llmcom join with --name ${alternative}, or use --title with a distinct chat title.`);
+  }
 }
 export function sessionStatus(id = currentSession()) {
   const record = sessionRecords().find(r => r.id === id);

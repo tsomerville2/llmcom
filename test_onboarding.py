@@ -49,8 +49,8 @@ class OnboardingTests(unittest.TestCase):
         sys.path.insert(0,str(SOURCE))
         try: spec.loader.exec_module(friendly)
         finally: sys.path.pop(0)
-        self.assertEqual(friendly.generated_name('Renamed Chat','travis','claude','2029c608-uuid'),'travis-claude-renamed-chat-2029c608')
-        self.assertEqual(friendly.generated_name('Design a live cross-agent channel | EXP31-pi-dev-tools','t','codex','01a0ffc0-uuid'),'t-codex-design-a-live-cross-agent-channel-01a0ffc0')
+        self.assertEqual(friendly.generated_name('Renamed Chat','travis','claude'),'travis-claude-renamed-chat')
+        self.assertEqual(friendly.generated_name('Design a live cross-agent channel | EXP31-pi-dev-tools','t','codex'),'t-codex-design-a-live-cross-agent-channel')
         self.assertEqual(friendly.channel_name('#channel-A'),'channel-a')
         friendly.HOME = self.home
         registry = self.home / '.claude/sessions'; registry.mkdir(parents=True)

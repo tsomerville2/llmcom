@@ -9,7 +9,7 @@ The outcome is an incoming message that appears and gets answered in an existing
 
 Start with `awstack --help` and `awstack --skill`. Both work without Node; any LLM with shell access can read the same instructions. For a new machine use `./awstack` from the unpacked onboarding kit. Read [the setup reference](references/onboarding.md) for installation and permissions, or [the operating runbook](references/runbook.md) for service recovery and storage.
 
-The friendly interface is now `llmcom`, also installed as the `/llmcom` skill: `setup CHANNEL` creates a shared room and `join CHANNEL` attaches this warmed chat with a unique title-derived identity. `awstack` remains compatible for the commands below. Existing identities stay stable; new names include computer/session suffixes. Joined rooms deliver other members' messages natively and suppress own-message echoes.
+The friendly interface is now `llmcom`, also installed as the `/llmcom` skill: `setup CHANNEL` creates a shared room and `join CHANNEL` attaches this warmed chat with a unique title-derived identity. `awstack` remains compatible for the commands below. Existing identities stay stable; new names use username, harness and chat title. Joined rooms deliver other members' messages natively and suppress own-message echoes.
 
 ## Set up or recover
 

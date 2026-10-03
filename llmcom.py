@@ -42,12 +42,11 @@ def chat_title(vendor, session):
             except sqlite3.Error: pass
     return Path.cwd().name or 'chat'
 
-def generated_name(title, username, vendor, session):
+def generated_name(title, username, vendor):
     prefix = slug(username)[:20] + '-' + slug(vendor)[:12] + '-'
-    suffix = '-' + (session[:8] if session else 'current')
     # cmux commonly decorates the visible chat title with " | project".
     title = title.split(' | ',1)[0]
-    return prefix + slug(title)[:64-len(prefix)-len(suffix)].rstrip('-') + suffix
+    return prefix + slug(title)[:64-len(prefix)].rstrip('-')
 
 def runtime(*args):
     if not NODE.exists() or not (CONFIG / 'stack.json').exists():
@@ -93,7 +92,7 @@ def main():
         existing = json.loads(record.read_text()) if record.exists() else {}
         title = args.title or chat_title(vendor, session)
         username = config.get('username') or os.environ.get('LLMCOM_USERNAME') or getpass.getuser()
-        name = args.name or existing.get('name') or generated_name(title, username, vendor, session)
+        name = args.name or existing.get('name') or generated_name(title, username, vendor)
         if not re.fullmatch(r'[a-zA-Z0-9_-]{1,64}', name): raise ValueError('Invalid chat identity; use a short name containing letters, numbers, underscores or hyphens.')
         if args.dry_run or not session:
             print(json.dumps({'writes':False, 'insideConversation':bool(session), 'channel':channel, 'chatTitle':title, 'identity':name, 'joinCommand':'~/bin/llmcom join ' + channel, 'next':'Run through the warmed chat shell; its native title/address will be detected there.'}, indent=2)); return
