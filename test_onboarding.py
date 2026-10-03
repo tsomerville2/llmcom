@@ -120,8 +120,8 @@ class OnboardingTests(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()): self.module.bundle(output)
         with zipfile.ZipFile(output) as archive:
             names = archive.namelist()
-            self.assertIn('agentworkforce/awstack', names)
-            self.assertIn('agentworkforce/references/runbook.md', names)
+            self.assertIn('llmcom/awstack', names)
+            self.assertIn('llmcom/references/runbook.md', names)
             self.assertFalse(any('workspace.json' in n or 'node_modules/' in n or 'evidence/' in n for n in names))
 
     def test_upgrade_is_read_only_in_preview_and_retains_sessions(self):

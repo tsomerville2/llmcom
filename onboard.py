@@ -225,7 +225,7 @@ def bundle(output):
     files = [SOURCE / name for name in FILES]
     for directory in ['flows', 'references', 'rescue']: files += [p for p in (SOURCE / directory).rglob('*') if p.is_file()]
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as z:
-        for p in sorted(files): z.write(p, 'agentworkforce/' + str(p.relative_to(SOURCE)))
+        for p in sorted(files): z.write(p, 'llmcom/' + str(p.relative_to(SOURCE)))
     print(json.dumps({'bundle': str(output), 'files': len(files), 'sha256': hashlib.sha256(output.read_bytes()).hexdigest(), 'secretsIncluded': False}))
 
 def upgrade(args):
