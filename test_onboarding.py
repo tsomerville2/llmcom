@@ -49,7 +49,8 @@ class OnboardingTests(unittest.TestCase):
         sys.path.insert(0,str(SOURCE))
         try: spec.loader.exec_module(friendly)
         finally: sys.path.pop(0)
-        self.assertEqual(friendly.generated_name('Tiered Brain / Model Lanes','captain','2029c608-uuid'),'tiered-brain-model-lanes-captain-2029c608')
+        self.assertEqual(friendly.generated_name('Renamed Chat','travis','claude','2029c608-uuid'),'travis-claude-renamed-chat-2029c608')
+        self.assertEqual(friendly.generated_name('Design a live cross-agent channel | EXP31-pi-dev-tools','t','codex','01a0ffc0-uuid'),'t-codex-design-a-live-cross-agent-channel-01a0ffc0')
         self.assertEqual(friendly.channel_name('#channel-A'),'channel-a')
         friendly.HOME = self.home
         registry = self.home / '.claude/sessions'; registry.mkdir(parents=True)
@@ -109,6 +110,10 @@ class OnboardingTests(unittest.TestCase):
         self.assertIn('$defaults', data['autoMode']['allow']); self.assertEqual(data['cleanupPeriodDays'], 36500)
         self.assertEqual(data['crossSessionInbound'], 'accept')
         self.assertTrue(list(p.parent.glob('*.bak')))
+        backup_count=len(list(p.parent.glob('*.bak')))
+        with contextlib.redirect_stdout(io.StringIO()):m.authorize_claude('alice-claude')
+        self.assertEqual(len(list(p.parent.glob('*.bak'))),backup_count)
+        self.assertEqual(json.loads(p.read_text()),data)
 
     def test_bundle_excludes_secrets_and_runtime(self):
         output = self.home / 'kit.zip'

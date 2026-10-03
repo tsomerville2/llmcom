@@ -20,4 +20,9 @@ class CustomBuildHook(BuildHookInterface):
                 destination = target / folder / path.name
                 destination.parent.mkdir(exist_ok=True)
                 shutil.copy2(path, destination)
+        if (root / 'rescue').exists(): shutil.copytree(root / 'rescue',target / 'rescue')
+        # Remaining parts ship in an automatically installed data wheel so
+        # each PyPI distribution fits the default 100 MB upload limit.
+        for path in (target/'rescue').glob('darwin-arm64.part*'):
+            if int(path.name.rsplit('part',1)[1]) >= 2:path.unlink()
         build_data['force_include'][str(target)] = 'llmcom/_stack'

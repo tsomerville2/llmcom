@@ -5,6 +5,7 @@ import { performance } from 'node:perf_hooks';
 import { RelayCast } from '@relaycast/sdk';
 import { readConfig, credentials, privateJson, configDir, stackDir, stateDir } from './runtime.mjs';
 import { joinSession, sessionIdentity, currentSession, sessionStatus, sessionRecords } from './session.mjs';
+import { ensureChannel } from './channel.mjs';
 
 process.once('uncaughtException', error => { console.error(`awstack: ${error.message}`); process.exit(1); });
 
@@ -78,13 +79,11 @@ else if (command === 'channel-create' || command === 'channel-join') {
   const channel = args[0];
   if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(channel || '')) throw new Error('Invalid channel name.');
   const me = client(config.identity);
-  let record = (await me.channels.list()).find(c => c.name === channel);
+  const { record, created } = await ensureChannel(me, channel);
   if (command === 'channel-create') {
-    if (!record) record = await me.channels.create({ name:channel, topic:'Live collaboration between explicitly joined warmed chats.' });
-    output({ ready:true, channel:record.name, next:`llmcom join ${record.name}` });
+    output({ ready:true, channel:record.name, created, next:`llmcom join ${record.name}` });
   } else {
-    if (!record) throw new Error(`Channel ${channel} does not exist. Run llmcom setup ${channel} first.`);
-    output(await joinSession(args[1], args[2], { channel }));
+    output({ ...(await joinSession(args[1], args[2], { channel })), channelCreated:created });
   }
 }
 else if (command === 'sessions') output(sessionRecords().map(record => sessionStatus(record.id)));

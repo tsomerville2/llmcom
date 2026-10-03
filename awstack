@@ -12,6 +12,7 @@ source = Path(__file__).resolve().parent
 # Installed wrappers find their implementation outside ~/bin.
 if not (source / 'onboard.py').exists():
     source = Path.home() / '.local/share/agentworkforce/stack'
+sys.path.insert(0, str(source))
 command = sys.argv[1] if len(sys.argv) > 1 else '--help'
 os.environ['PATH'] = str(Path.home() / '.local/share/agentworkforce/node/bin') + ':' + str(Path.home() / 'bin') + ':' + os.environ.get('PATH', '')
 if command == '--version':
@@ -24,12 +25,15 @@ elif command in ['--help', '-h', 'help']:
   /llmcom join channel-A               Join as this chat; infer its renamed title
 
 The same commands work in a shell as `llmcom setup` / `llmcom join`.
+Setup is idempotent; saved connection settings and healthy dependencies are reused.
+Join creates a missing room and preserves this chat identity when repeated.
 Join must run through the warmed chat's shell tool to capture its native address.
 
   llmcom --skill                       Instructions for any LLM, even before installation
   llmcom --version                     Installed CLI release
   llmcom upgrade                       Apply this release to an existing stack and skills
   llmcom install-skill                 Install /llmcom instructions for Claude and Codex
+  llmcom rescue status | verify        Inspect/check bundled emergency artifacts
   llmcom setup --help                  New Mac installation and channel options
   llmcom join --help                   Name/title overrides and preview options
   llmcom say channel-A TEXT            Message everyone in the channel
@@ -43,10 +47,14 @@ Install the CLI: uv tool install llmcom (or pipx install llmcom).
 Existing stack: uvx --from llmcom llmcom upgrade
 New teammate Mac:
   llmcom setup channel-A --computer alice --ssh-host SERVER --credentials-file FILE
+Explicit emergency setup (Apple Silicon; private server/SSH credentials still needed):
+  llmcom setup channel-A --offline --computer alice --ssh-host SERVER --credentials-file FILE
+Save both released wheels or the complete GitHub source kit beforehand.
 Then use /llmcom join channel-A inside the existing chat.
+Setup reuses existing settings and healthy dependencies. Join creates missing rooms.
 
 Claude join merges the authorized incoming-text config, preserving tool permission mode.
-Existing identities remain stable; new names use chat title, computer and session suffix.
+Existing identities remain stable; new names use username-harness-title-session8.
 Channels share messages only with joined chats; your own posts are not echoed into you.
 Legacy `awstack` commands remain compatible. Current native adapters: Claude and Codex/macOS.
 ''')
@@ -89,6 +97,9 @@ elif command == '--skill':
 elif command in ['upgrade', 'install-skill']:
     sys.argv = [str(source / 'onboard.py')] + sys.argv[1:]
     runpy.run_path(str(source / 'onboard.py'), run_name='__main__')
+elif command == 'rescue':
+    sys.argv = [str(source / 'rescue.py')] + sys.argv[2:]
+    runpy.run_path(str(source / 'rescue.py'), run_name='__main__')
 elif friendly:
     sys.path.insert(0, str(source))
     sys.argv[0] = str(source / 'llmcom.py')

@@ -23,7 +23,7 @@ CONFIG = HOME / '.config/agentworkforce'
 STATE = HOME / '.local/state/agentworkforce'
 NODE_VERSION = '22.23.3'
 FILES = ['package.json', 'package-lock.json', 'runtime.mjs', 'cli.mjs', 'server.mjs', 'awstack', 'awstack.mjs',
-         'session.mjs', 'codex-session.mjs', 'doctor.mjs', 'install-tools.py', 'onboard.py', 'SKILL.md', 'llmcom', 'llmcom.py', 'LLMCOM-SKILL.md', 'VERSION']
+         'session.mjs', 'codex-session.mjs', 'channel.mjs', 'doctor.mjs', 'install-tools.py', 'onboard.py', 'rescue.py', 'SKILL.md', 'llmcom', 'llmcom.py', 'LLMCOM-SKILL.md', 'VERSION']
 NODE_HASHES = {
     'arm64': '23b25245dcfb9af7262f8ff142e9e2e0af025368117329e7a7458a51e5922f53',
     'x64': '8a677b0219178efd6eb0e475457c4afb452b521a92f6e67845a73bd85727f2a8',
@@ -130,9 +130,9 @@ def authorize_claude(agent):
     if not re.fullmatch(r'[a-zA-Z0-9_-]{1,64}', agent): raise ValueError('Invalid agent name.')
     p = HOME / '.claude/settings.json'
     data = json.loads(p.read_text()) if p.exists() else {}
+    original = json.loads(json.dumps(data))
     if data.get('crossSessionInbound') == 'refuse':
         raise ValueError('User settings explicitly refuse cross-session input. Ask the owner to change that choice before joining.')
-    backup(p)
     # Detached listeners are external peers. Bypass mode otherwise holds them.
     # The explicit authorization command enables incoming peer text, not a new tool permission mode.
     data['crossSessionInbound'] = 'accept'
@@ -151,8 +151,9 @@ def authorize_claude(agent):
     for spelling in ['~/bin/awstack', str(HOME / 'bin/awstack')]:
         rule = 'Bash(' + spelling + ' join ' + agent + ' claude)'
         if rule not in rules: rules.append(rule)
-    private_json(p, data)
-    print(json.dumps({'configured': str(p), 'exactJoinAgent': agent, 'crossSessionInbound': 'accept', 'defaultsPreserved': True}))
+    if data != original:
+        backup(p);private_json(p, data)
+    print(json.dumps({'configured': str(p), 'exactJoinAgent': agent, 'crossSessionInbound': 'accept', 'defaultsPreserved': True,'settingsReused':data==original}))
 
 def install(args):
     if not re.fullmatch(r'[a-z][a-z0-9-]{0,39}', args.name): raise ValueError('Name must be a short lowercase computer name.')
@@ -161,7 +162,7 @@ def install(args):
     if not 1024 <= args.port <= 65535: raise ValueError('Invalid port.')
     if not args.credentials_file and not (CONFIG / 'workspace.json').exists(): raise ValueError('Provide a private workspace credential file with --credentials-file.')
     if args.dry_run:
-        print(json.dumps({'dryRun': True, 'writes': False, 'name': args.name, 'sshHost': args.ssh_host, 'port': args.port, 'pinnedNode': NODE_VERSION, 'harness': args.harness, 'next': 'install packages → private credentials → persistent tunnel/broker → MCP/skill → join current chat → active and idle proof'}, indent=2)); return
+        print(json.dumps({'dryRun': True, 'writes': False, 'name': args.name, 'sshHost': args.ssh_host, 'port': args.port, 'pinnedNode': NODE_VERSION, 'harness': args.harness, 'offline':getattr(args,'offline',False), 'next': 'install packages → private credentials → persistent tunnel/broker → MCP/skill → join current chat → active and idle proof'}, indent=2)); return
     if platform.system() != 'Darwin': raise ValueError('This installer is currently macOS only.')
     # Fail on wrapper collisions and role changes before downloading or overwriting anything.
     for name in ['agent-relay', 'ai-hist', 'ai-hist-mcp', 'trail', 'flows', 'relaycast-mcp', 'awstack', 'llmcom']:
@@ -178,7 +179,14 @@ def install(args):
         if current and current.get('apiKey') != given['apiKey']: raise ValueError('Already joined to another workspace; refusing replacement.')
     # Check SSH access before service installation; does not add keys or change server access.
     run(['/usr/bin/ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', args.ssh_host, 'true'])
-    install_node()
+    offline = getattr(args,'offline',False)
+    if offline:
+        import rescue
+        rescue.install_runtime(ROOT)
+    else:
+        try: install_node()
+        except (OSError,ValueError):
+            raise ValueError('Pinned upstream Node installation failed. Check network/checksum diagnostics, or explicitly use llmcom setup CHANNEL --offline with the same private setup arguments.')
     STACK.mkdir(parents=True, exist_ok=True)
     expected_lock = (SOURCE / 'package-lock.json').read_bytes()
     reuse = (STACK / 'node_modules').exists() and (STACK / 'package-lock.json').exists() and (STACK / 'package-lock.json').read_bytes() == expected_lock
@@ -186,7 +194,14 @@ def install(args):
         for name in FILES: shutil.copy2(SOURCE / name, STACK / name)
         for name in ['flows', 'references']:
             if (SOURCE / name).exists(): shutil.copytree(SOURCE / name, STACK / name, dirs_exist_ok=True)
-    if not reuse: run([ROOT / 'node/bin/npm', 'ci', '--no-audit', '--no-fund'], cwd=STACK, env=tool_environment())
+        if (SOURCE/'rescue').exists():
+            import rescue
+            rescue.copy_artifacts(STACK/'rescue')
+    if not reuse:
+        if offline: raise ValueError('Offline snapshot did not restore the expected dependency tree.')
+        try: run([ROOT / 'node/bin/npm', 'ci', '--no-audit', '--no-fund'], cwd=STACK, env=tool_environment())
+        except subprocess.CalledProcessError:
+            raise ValueError('Upstream installation failed. Diagnose the npm error, or explicitly use llmcom setup CHANNEL --offline with the same private setup arguments. No automatic fallback occurred.')
     run(['/usr/bin/python3', STACK / 'install-tools.py', args.name, '--ssh-host', args.ssh_host, '--port', args.port, '--workspace', args.workspace])
     if args.credentials_file: import_credentials(args.credentials_file)
     domain = 'gui/' + str(os.getuid())
@@ -208,7 +223,7 @@ def install(args):
 def bundle(output):
     output = Path(output).expanduser().resolve(); output.parent.mkdir(parents=True, exist_ok=True)
     files = [SOURCE / name for name in FILES]
-    for directory in ['flows', 'references']: files += [p for p in (SOURCE / directory).rglob('*') if p.is_file()]
+    for directory in ['flows', 'references', 'rescue']: files += [p for p in (SOURCE / directory).rglob('*') if p.is_file()]
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as z:
         for p in sorted(files): z.write(p, 'agentworkforce/' + str(p.relative_to(SOURCE)))
     print(json.dumps({'bundle': str(output), 'files': len(files), 'sha256': hashlib.sha256(output.read_bytes()).hexdigest(), 'secretsIncluded': False}))
@@ -235,6 +250,31 @@ def upgrade(args):
     install_skill()
     print(json.dumps({'upgraded': True, 'version': (SOURCE / 'VERSION').read_text().strip(),
                       'listenersRestarted': False, 'next': 'Read llmcom --skill. Existing chat identities remain stable; join from inside a chat when needed.'}))
+
+def ensure_installed_runtime(offline=False, dry_run=False):
+    """Idempotent setup on an already configured client or server."""
+    node = ROOT / 'node/bin/node'
+    healthy = node.exists() and (STACK/'package-lock.json').exists() and (STACK/'package-lock.json').read_bytes() == (SOURCE/'package-lock.json').read_bytes()
+    if healthy:
+        check = subprocess.run([str(node),'-e', "const D=require('better-sqlite3');const d=new D(':memory:');if(process.version!=='v22.23.3'||d.prepare('select 1 as ok').get().ok!==1)process.exit(1);require('ai-hist-native')"],cwd=STACK,env=tool_environment(),capture_output=True,timeout=30)
+        healthy = check.returncode == 0
+    if dry_run:
+        print(json.dumps({'dryRun':True,'writes':False,'runtimeHealthy':healthy,'offline':offline,'next':'Keep healthy runtime; otherwise install selected upstream or bundled dependencies; ensure channel exists.'}));return
+    if not healthy:
+        if offline:
+            import rescue
+            rescue.install_runtime(ROOT,replace=(STACK/'node_modules').exists())
+        else:
+            try:
+                install_node();STACK.mkdir(parents=True,exist_ok=True)
+                for name in ['package.json','package-lock.json']:
+                    if SOURCE != STACK:shutil.copy2(SOURCE/name,STACK/name)
+                run([ROOT/'node/bin/npm','ci','--no-audit','--no-fund'],cwd=STACK,env=tool_environment())
+            except (OSError,ValueError,subprocess.CalledProcessError):
+                raise ValueError('Upstream dependency installation failed. Inspect the failure or explicitly repeat llmcom setup CHANNEL --offline. No automatic fallback occurred.')
+    if not (STACK/'VERSION').exists() or (STACK/'VERSION').read_bytes() != (SOURCE/'VERSION').read_bytes():
+        upgrade(argparse.Namespace(dry_run=False))
+    print(json.dumps({'runtimeReady':True,'reused':healthy,'offline':offline,'next':'Create or reuse the requested room, then join this warmed chat.'}))
 
 def connect(args):
     config = json.loads((CONFIG / 'stack.json').read_text()) if (CONFIG / 'stack.json').exists() else {'role': 'teammate'}
@@ -313,7 +353,7 @@ def repair(args):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__); sub = p.add_subparsers(dest='command', required=True)
-    i = sub.add_parser('install'); i.add_argument('--name', required=True); i.add_argument('--ssh-host', required=True); i.add_argument('--credentials-file'); i.add_argument('--port', type=int, default=8787); i.add_argument('--workspace', default='exp31-collaboration'); i.add_argument('--harness', choices=['auto','both','claude','codex','none'], default='auto'); i.add_argument('--dry-run', action='store_true')
+    i = sub.add_parser('install'); i.add_argument('--name', required=True); i.add_argument('--ssh-host', required=True); i.add_argument('--credentials-file'); i.add_argument('--port', type=int, default=8787); i.add_argument('--workspace', default='exp31-collaboration'); i.add_argument('--harness', choices=['auto','both','claude','codex','none'], default='auto'); i.add_argument('--dry-run', action='store_true'); i.add_argument('--offline',action='store_true',help='Explicitly use vendored Apple Silicon runtime/dependencies without GitHub/npm downloads.')
     sub.add_parser('doctor'); sub.add_parser('install-skill')
     u = sub.add_parser('upgrade'); u.add_argument('--dry-run', action='store_true')
     r = sub.add_parser('repair'); r.add_argument('--dry-run', action='store_true')

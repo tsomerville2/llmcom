@@ -1,0 +1,138 @@
+{
+  "format": 1,
+  "nodeVersion": "22.23.3",
+  "nodeAbi": "127",
+  "lockSha256": "46fc87cd0023b3f6f7b7b376941bc8b6791672361627ccb0cfe1bb6ab13b511d",
+  "platforms": {
+    "darwin-arm64": {
+      "parts": [
+        {
+          "file": "darwin-arm64.part000",
+          "size": 20971520,
+          "sha256": "faa5200eb174e606c980bacb58225c822278b05ab2ae5090be1a30a990dbee09"
+        },
+        {
+          "file": "darwin-arm64.part001",
+          "size": 20971520,
+          "sha256": "3d78fe680ba871f1759f0688dbe12426830a5b1d7d788b60a0f9addb8075a1d9"
+        },
+        {
+          "file": "darwin-arm64.part002",
+          "size": 20971520,
+          "sha256": "053cddfa8635a6e2d13c2e3457ef1d70fed410a77aa6effaed56fb21abd1d2ce"
+        },
+        {
+          "file": "darwin-arm64.part003",
+          "size": 20971520,
+          "sha256": "7b7933a80c0801a129874ef582717c31eb9f2930bc392af4e9859eb5b4a20e2e"
+        },
+        {
+          "file": "darwin-arm64.part004",
+          "size": 20971520,
+          "sha256": "7378e3a90d2cc2de7a65c9086de227dd8215c548827e2c54b4a87159fa990d50"
+        },
+        {
+          "file": "darwin-arm64.part005",
+          "size": 19033620,
+          "sha256": "af72eaf82141bdaab3b93b5274f30583bc094260547b0f51c044c46dddd43d26"
+        }
+      ],
+      "sha256": "48e4efbf1ab0e617a462f4204ead80df2dd034b09c2cd0ec9de1343d200b65a5"
+    }
+  },
+  "sources": [
+    {
+      "repository": "https://github.com/AgentWorkforce/relaycast.git",
+      "package": "@relaycast/engine",
+      "version": "8.16.0",
+      "commit": "84e733a3a5fac324a8d8a1e6a4864273e9637496",
+      "exactReleaseSource": true,
+      "archive": "relaycast-84e733a3a5fac324a8d8a1e6a4864273e9637496.tar.gz",
+      "sha256": "efdb0cc6cc605039f02fc69a28afc931572695ebccfb73d462a273ae7f3e6fa9",
+      "notices": [
+        "relaycast-LICENSE"
+      ]
+    },
+    {
+      "repository": "https://github.com/AgentWorkforce/relay.git",
+      "package": "agent-relay",
+      "version": "13.0.1",
+      "commit": "a5619e8881e1d631b9f59cab3f31eae5d29808b4",
+      "exactReleaseSource": true,
+      "archive": "relay-a5619e8881e1d631b9f59cab3f31eae5d29808b4.tar.gz",
+      "sha256": "c08c26182923ba44d77e9b96cd719c0d406ce19fc4b0653226faa4317f49b376",
+      "notices": [
+        "relay-LICENSE"
+      ]
+    },
+    {
+      "repository": "https://github.com/AgentWorkforce/trajectories.git",
+      "package": "agent-trajectories",
+      "version": "0.7.0",
+      "commit": "88e8dd3a669799eb75c38822000721ca4bf17c86",
+      "exactReleaseSource": false,
+      "archive": "trajectories-88e8dd3a669799eb75c38822000721ca4bf17c86.tar.gz",
+      "sha256": "4f158ae7ad00884db6be5a8ac16c7e2b30ccd1616f0a5e254e3eb4458ed25c87",
+      "notices": [
+        "trajectories-LICENSE-DECLARATION.json"
+      ]
+    },
+    {
+      "repository": "https://github.com/AgentWorkforce/relayhistory.git",
+      "package": "ai-hist",
+      "version": "0.33.0",
+      "commit": "6b5ca1eefc85de1572e6cf624f6fd39e70e72bab",
+      "exactReleaseSource": true,
+      "archive": "relayhistory-6b5ca1eefc85de1572e6cf624f6fd39e70e72bab.tar.gz",
+      "sha256": "c734b02f45748b41ed3b0b949bd7321858a179d6bd6dbaf2fc94ce3763e07cdf",
+      "notices": [
+        "relayhistory-LICENSE"
+      ]
+    },
+    {
+      "repository": "https://github.com/AgentWorkforce/flows.git",
+      "package": "relayflows",
+      "version": "2.0.38",
+      "commit": "30b0565c602e8b7c491d5a7e51c97358445cfa4e",
+      "exactReleaseSource": true,
+      "archive": "flows-30b0565c602e8b7c491d5a7e51c97358445cfa4e.tar.gz",
+      "sha256": "821a4a4c6f9f3e44110b3c29b4b0e86f6e2991653c92091926115243de8a62a2",
+      "notices": [
+        "flows-LICENSE"
+      ]
+    }
+  ],
+  "excludedForeignBinaries": [
+    "node_modules/relayflows/node_modules/@agent-relay/sdk/bin/agent-relay-broker-win32-x64.exe",
+    "node_modules/relayflows/node_modules/@agent-relay/sdk/bin/agent-relay-broker-linux-arm64",
+    "node_modules/relayflows/node_modules/@agent-relay/sdk/bin/agent-relay-broker-darwin-x64",
+    "node_modules/relayflows/node_modules/@agent-relay/sdk/bin/agent-relay-broker-linux-x64",
+    "node_modules/@relayflows/browser-primitive/node_modules/@agent-relay/sdk/bin/agent-relay-broker-win32-x64.exe",
+    "node_modules/@relayflows/browser-primitive/node_modules/@agent-relay/sdk/bin/agent-relay-broker-linux-arm64",
+    "node_modules/@relayflows/browser-primitive/node_modules/@agent-relay/sdk/bin/agent-relay-broker-darwin-x64",
+    "node_modules/@relayflows/browser-primitive/node_modules/@agent-relay/sdk/bin/agent-relay-broker-linux-x64",
+    "node_modules/@relayflows/core/node_modules/@agent-relay/sdk/bin/agent-relay-broker-win32-x64.exe",
+    "node_modules/@relayflows/core/node_modules/@agent-relay/sdk/bin/agent-relay-broker-linux-arm64",
+    "node_modules/@relayflows/core/node_modules/@agent-relay/sdk/bin/agent-relay-broker-darwin-x64",
+    "node_modules/@relayflows/core/node_modules/@agent-relay/sdk/bin/agent-relay-broker-linux-x64",
+    "node_modules/@agent-relay/sdk/bin/agent-relay-broker-win32-x64.exe",
+    "node_modules/@agent-relay/sdk/bin/agent-relay-broker-linux-arm64",
+    "node_modules/@agent-relay/sdk/bin/agent-relay-broker-darwin-x64",
+    "node_modules/@agent-relay/sdk/bin/agent-relay-broker-linux-x64"
+  ],
+  "packages": 565,
+  "artifactFiles": {
+    "packages.json": "3aec275d5e3dcea4c160f27d78ed67a968787c369ca87d78e269457697310cae",
+    "NOTICE.md": "ad654c3c3b62edf9c00fc76b6a669f44289491ab0827c9f82900f584893b3b16",
+    "sources/trajectories-88e8dd3a669799eb75c38822000721ca4bf17c86.tar.gz": "4f158ae7ad00884db6be5a8ac16c7e2b30ccd1616f0a5e254e3eb4458ed25c87",
+    "sources/flows-LICENSE": "d750295653e3dcf113a1d0478346e609b6c47d8a4c546991d7636885c91542aa",
+    "sources/relay-a5619e8881e1d631b9f59cab3f31eae5d29808b4.tar.gz": "c08c26182923ba44d77e9b96cd719c0d406ce19fc4b0653226faa4317f49b376",
+    "sources/relaycast-LICENSE": "d750295653e3dcf113a1d0478346e609b6c47d8a4c546991d7636885c91542aa",
+    "sources/relay-LICENSE": "d750295653e3dcf113a1d0478346e609b6c47d8a4c546991d7636885c91542aa",
+    "sources/relayhistory-LICENSE": "1e1800542b3a5716e2aefa87831bdfd66a8a1d4b1aee20b2e43be850a4a8bc28",
+    "sources/relaycast-84e733a3a5fac324a8d8a1e6a4864273e9637496.tar.gz": "efdb0cc6cc605039f02fc69a28afc931572695ebccfb73d462a273ae7f3e6fa9",
+    "sources/relayhistory-6b5ca1eefc85de1572e6cf624f6fd39e70e72bab.tar.gz": "c734b02f45748b41ed3b0b949bd7321858a179d6bd6dbaf2fc94ce3763e07cdf",
+    "sources/flows-30b0565c602e8b7c491d5a7e51c97358445cfa4e.tar.gz": "821a4a4c6f9f3e44110b3c29b4b0e86f6e2991653c92091926115243de8a62a2",
+    "sources/trajectories-LICENSE-DECLARATION.json": "e0550fd7a7756b1b2a6c36c2497324864f577305dda658d564104a7f5dafd15d"
+  }
+}

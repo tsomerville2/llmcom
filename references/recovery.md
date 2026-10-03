@@ -1,21 +1,64 @@
-# Keeping an upstream emergency copy
+# Vendored emergency installation
 
-Vendoring means distributing dependency source or artifacts alongside your own project. A repository can contain a `rescue/` directory and a Python wheel/sdist can include those files as package data. A package registry does not automatically copy an upstream Git repository referenced by your project.
+LLMCom 0.2.0 embeds a separate Apple Silicon rescue snapshot in the GitHub repository, wheel and source distribution. It contains Node 22.23.3, the exact installed npm dependency tree including native SQLite/history/broker/Flows binaries, upstream source archives, licenses/notices, a package inventory and checksums. Ordinary setup continues downloading pinned upstream dependencies. There is no silent fallback.
 
-LLMCom 0.1.0 includes its integration code, skills and pinned npm lockfile. It does **not** include a vendored upstream recovery archive or an offline restore command. Normal setup downloads the pinned upstream dependencies and Node runtime.
+## Ordinary installation
 
-A future explicit rescue bundle should contain:
+```sh
+uv tool install llmcom
+llmcom setup team --computer alice --ssh-host SERVER --credentials-file PRIVATE_FILE
+```
 
-- Source mirrors or Git bundles for upstream projects, with exact commits and licenses.
-- Registry tarballs for every dependency in the npm lockfile, including transitive dependencies, verified against the lockfile integrity hashes.
-- The appropriate Node runtime archives and separately downloaded native binaries or build prerequisites for each supported architecture.
-- The LLMCom wheel/sdist, dependency manifest, checksums and instructions.
-- A restore process tested with network access disabled on a fresh supported machine.
+While PyPI first-publication credentials are pending, install from GitHub:
 
-Source alone is insufficient for rebuilding a native dependency when its toolchain or binary downloads have disappeared. An offline dependency registry or complete npm cache can complement archived tarballs, but it must be tested rather than assumed complete. Backing up Claude/Codex client code does not preserve access to their hosted model services.
+```sh
+uv tool install \
+  --with 'https://github.com/tsomerville2/llmcom/releases/download/v0.2.0/llmcom_rescue_data-0.2.0-py3-none-any.whl' \
+  'https://github.com/tsomerville2/llmcom/releases/download/v0.2.0/llmcom-0.2.0-py3-none-any.whl'
+```
 
-Keep ordinary installs pointed at upstream. Emergency restore should be a deliberate separate command, pinned to the archived release, rather than silently switching to an older copy when an online installation fails. Preserve third-party licenses and notices when distributing vendored files.
+Setup attempts dependency installation itself, then configures the private tunnel/broker/MCP/skills. SSH access and the private workspace file are still prerequisites.
 
-An embedded rescue archive can be committed to GitHub and shipped as package data on PyPI. Large bundles may be better as separate release assets or an optional rescue distribution. Store an additional copy outside GitHub/PyPI, such as an external drive and independent object storage.
+## Save the complete release before an outage
 
-Useful references: [GitHub repository backup](https://docs.github.com/en/repositories/archiving-a-github-repository/backing-up-a-repository), [GitHub mirroring](https://docs.github.com/en/repositories/creating-and-managing-repositories/duplicating-a-repository), [npm package archives](https://docs.npmjs.com/cli/v11/commands/npm-pack/), [npm lockfile format](https://docs.npmjs.com/cli/v11/configuring-npm/package-lock-json/).
+Keep both release wheels or the complete GitHub source kit on a disk you control. The data-only `llmcom-rescue-data` companion installs automatically with `llmcom`, splitting the embedded payload to keep each PyPI file below its default 100 MB limit. The `rescue/` directory must remain with the scripts. Both GitHub and PyPI are distribution locations, not automatic backups of dependencies. Keep a second copy outside those services. Installing the CLI plus its automatic data companion carries the whole rescue snapshot.
+
+```sh
+python3 -m pip download llmcom==0.2.0 -d saved-release
+# From a local wheel, with no package registry access:
+python3 -m pip install --no-index --find-links saved-release llmcom==0.2.0
+```
+
+The complete GitHub source kit also works directly with macOS system Python: `./llmcom --help`; it does not need pip/uv to bootstrap. Wheels and tarballs are attached to the GitHub release too.
+
+## Explicit emergency setup
+
+```sh
+llmcom rescue status
+llmcom rescue verify
+llmcom setup team --offline --computer alice --ssh-host SERVER --credentials-file PRIVATE_FILE
+```
+
+`--offline` means no upstream dependency/runtime downloads. Your private Relaycast server and SSH connection must still be reachable; messaging is a network service. No cloud account, SSH key, harness install or hosted model service is created by this backup.
+
+The bundled native snapshot currently supports **macOS Apple Silicon (`darwin-arm64`)**. Intel Macs retain ordinary upstream installation. Offline restore rejects an unsupported architecture rather than installing the wrong binaries.
+
+## One idempotent setup command
+
+```sh
+llmcom setup team
+# Select the embedded copy explicitly during an upstream outage:
+llmcom setup team --offline
+# Inspect the selected action without changing installation state:
+llmcom setup team --offline --dry-run
+```
+
+An already configured Mac reuses its saved connection details and healthy dependencies. Missing/damaged dependencies are installed using the selected mode; an offline replacement preserves the old tree under `~/.local/share/agentworkforce/rescue-backups/`. Setup refreshes integration/skills when this release differs, then creates or reuses the room. It does not restart warmed conversations/listeners. A new Mac reports the missing connection arguments; the LLM asks the owner only for those values and repeats the same command.
+
+Inside the same warmed chat, read `llmcom --skill` and invoke `/llmcom join team` (or `$llmcom` in Codex). Join creates a missing room, attaches this conversation, and reports whether it created the room. Repeated joins keep the same identity and avoid repeating an already pending/acknowledged receipt probe. Join must run through the chat's own shell tool; it does not create a replacement model conversation or change permission mode.
+
+## Provenance and maintenance
+
+`rescue/manifest.json` records pinned lock hash, payload/part hashes, native ABI, upstream source commits and any omitted foreign broker binaries. `packages.json` records installed package versions, registry origins, integrity values and declared licenses. Original third-party license/notice files remain inside the runtime and upstream archives; root notices are also under `rescue/sources/`. Source entries with `exactReleaseSource=false` are explicitly reference snapshots, not claimed to match the npm release; the executable npm snapshot itself is the exact pinned tree.
+
+The maintainer script `vendor.py --node-archive VERIFIED_NODE_ARCHIVE` builds a fresh isolated npm-ci tree, checks native SQLite, archives source and compresses the payload into ordinary 20 MiB files. The parts live in normal Git and package data, without Git LFS or external rescue downloads. Verification detects missing/corrupt parts before runtime installation. Update and retest this snapshot whenever changing the dependency lock or native runtime.

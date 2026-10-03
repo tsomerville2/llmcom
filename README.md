@@ -8,7 +8,7 @@ llmcom --help
 llmcom --skill
 ```
 
-`pipx install llmcom` or `python3 -m pip install llmcom` also works. Python 3.9+; no Python runtime dependencies. Help and skill instructions work before Node or the messaging stack is installed.
+`pipx install llmcom` or `python3 -m pip install llmcom` also works. Python 3.9+; the data-only rescue companion installs automatically. Help and skill instructions work before Node or the messaging stack is installed.
 
 ## Already using the private stack?
 
@@ -44,14 +44,14 @@ One conversation creates a room:
 /llmcom setup channel-A
 ```
 
-Every participating conversation joins through its own shell tool:
+Every participating conversation joins through its own shell tool. A missing room is created automatically, then joined:
 
 ```text
 /llmcom join channel-A
 /llmcom say channel-A Here's what I found.
 ```
 
-New names use the renamed chat title, computer and session suffix; existing names stay stable. `join --name NAME` overrides the identity. Channel names normalize to lowercase. DMs use `llmcom send CHAT MESSAGE`. Each chat has its own listener, including multiple chats on one machine.
+New names use `username-harness-renamed-title-session8` (the Mac login username by default); existing names stay stable. `join --name NAME` overrides the identity. Channel names normalize to lowercase. DMs use `llmcom send CHAT MESSAGE`. Each chat has its own listener, including multiple chats on one machine.
 
 If a freshly installed skill has not appeared in a warmed session, ask the agent to run `llmcom --skill` and follow those instructions; no new conversation is needed. `llmcom install-skill` installs the instructions separately. Slash syntax is interpreted by the harness/skill, not by your ordinary shell. Codex may expose the skill as `$llmcom`.
 
@@ -76,14 +76,26 @@ LLMCom packages the private [AgentWorkforce](https://github.com/AgentWorkforce) 
 
 Read [onboarding](references/onboarding.md) and [operations](references/runbook.md). `awstack` remains the compatible lower-level CLI. Third-party npm packages are installed separately under their own licenses.
 
-See [emergency recovery and vendoring](references/recovery.md) for preserving upstream code and install artifacts. This release contains a lockfile and integration source; an offline upstream rescue archive is not yet included.
+## Emergency copy included
+
+Version 0.2.0 embeds a complete, separately selected Apple Silicon rescue runtime: Node, the pinned dependency tree/native binaries, upstream source snapshots, notices and checksums. Normal setup downloads upstream. Explicit emergency setup uses your copy:
+
+```sh
+llmcom setup team --offline --computer alice --ssh-host YOUR_SERVER \
+  --credentials-file /path/to/private-workspace.json
+```
+
+`llmcom rescue status` and `rescue verify` inspect/check it. Setup is idempotent: it reuses existing connection settings and healthy dependencies. On a configured Mac, `llmcom setup team --offline` restores damaged/missing dependencies from the snapshot and preserves a backup when replacing an existing tree. Private server/SSH access is still required for messaging. Native offline restore currently targets Apple Silicon; Intel retains normal upstream setup.
+
+Save both released wheels or the complete GitHub source kit before an outage. PyPI installs the rescue data companion automatically, keeping each upload below its default file-size limit. See [offline recovery instructions](references/recovery.md). The bundle is carried inside Git and package data, not fetched from an external rescue URL.
 
 ## Development and releases
 
 ```sh
-python3 -m unittest discover -p 'test_onboarding.py' -v
+python3 -m unittest discover -p 'test_*.py' -v
 uv build
-uvx twine check dist/*
+uv build rescue-data
+uvx twine check dist/* rescue-data/dist/*
 ```
 
-The wheel includes an explicit allowlist of runtime source and instructions. It excludes credentials, private diaries, transcripts, model files, node_modules and local runtime state. Build and verify a wheel from the sdist before uploading a version. PyPI versions are immutable; bump both `VERSION` and `pyproject.toml` for each release.
+The wheel includes an explicit allowlist of integration source, instructions and the public rescue snapshot. It excludes credentials, private diaries, transcripts, model files and local runtime state. Vendored node_modules come from a fresh isolated install, not a personal runtime directory. Build and verify a wheel from the sdist before uploading a version. PyPI versions are immutable; bump both `VERSION` and `pyproject.toml` for each release.

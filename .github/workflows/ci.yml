@@ -10,17 +10,22 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - name: Offline onboarding regression checks
-        run: /usr/bin/python3 -m unittest discover -p test_onboarding.py -v
+        run: /usr/bin/python3 -m unittest discover -p 'test_*.py' -v
       - name: Build wheel from source distribution
-        run: uv build
+        run: |
+          uv build
+          uv build rescue-data
       - name: Validate package metadata
-        run: uvx twine check dist/*
+        run: uvx twine check dist/* rescue-data/dist/*
       - name: Install and inspect published interface
         run: |
-          uv tool run --from dist/llmcom-*.whl llmcom --version
-          uv tool run --from dist/llmcom-*.whl llmcom --help
-          uv tool run --from dist/llmcom-*.whl llmcom --skill
+          uv tool run --from dist/llmcom-*.whl --with rescue-data/dist/llmcom_rescue_data-*.whl llmcom --version
+          uv tool run --from dist/llmcom-*.whl --with rescue-data/dist/llmcom_rescue_data-*.whl llmcom --help
+          uv tool run --from dist/llmcom-*.whl --with rescue-data/dist/llmcom_rescue_data-*.whl llmcom --skill
+          uv tool run --from dist/llmcom-*.whl --with rescue-data/dist/llmcom_rescue_data-*.whl llmcom rescue verify
       - uses: actions/upload-artifact@v4
         with:
           name: python-distributions
-          path: dist/*
+          path: |
+            dist/*
+            rescue-data/dist/*

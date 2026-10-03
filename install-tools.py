@@ -41,7 +41,7 @@ for directory in [config, state, stack, home / 'bin', home / 'Library/LaunchAgen
     directory.mkdir(parents=True, exist_ok=True)
 for directory in [config, state]:
     directory.chmod(0o700)
-for name in ['package.json', 'package-lock.json', 'install-tools.py', 'runtime.mjs', 'cli.mjs', 'server.mjs', 'awstack.mjs', 'session.mjs', 'codex-session.mjs', 'doctor.mjs', 'onboard.py', 'SKILL.md', 'awstack', 'llmcom', 'llmcom.py', 'LLMCOM-SKILL.md', 'VERSION']:
+for name in ['package.json', 'package-lock.json', 'install-tools.py', 'runtime.mjs', 'cli.mjs', 'server.mjs', 'awstack.mjs', 'session.mjs', 'codex-session.mjs', 'channel.mjs', 'doctor.mjs', 'onboard.py', 'rescue.py', 'SKILL.md', 'awstack', 'llmcom', 'llmcom.py', 'LLMCOM-SKILL.md', 'VERSION']:
     if not (source / name).exists():
         continue
     if source / name != stack / name:
@@ -50,6 +50,9 @@ if (source / 'flows').exists() and source != stack:
     shutil.copytree(source / 'flows', stack / 'flows', dirs_exist_ok=True)
 if (source / 'references').exists() and source != stack:
     shutil.copytree(source / 'references', stack / 'references', dirs_exist_ok=True)
+if (source / 'rescue').exists() and source != stack:
+    import rescue
+    rescue.copy_artifacts(stack / 'rescue')
 settings = {**existing, 'role': args.role, 'identity': existing.get('identity', f'{args.role}-tools'),
             'baseUrl': f'http://127.0.0.1:{port}', 'sshHost': ssh_host,
             'workspace': args.workspace or existing.get('workspace', 'exp31-collaboration'), 'primaryRecall': 'navcom',

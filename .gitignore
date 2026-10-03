@@ -1,4 +1,5 @@
 dist/
+rescue-data/dist/
 src/llmcom/_stack/
 node_modules/
 __pycache__/
