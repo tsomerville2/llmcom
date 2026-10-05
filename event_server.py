@@ -35,12 +35,14 @@ def principal(authorization, accounts):
     return None
 
 
-def handler(accounts_file, store):
+def handler(accounts_file, store, dispatch=reply):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self,*args):pass  # Never log bearer tokens, URLs, or payloads.
         def setup(self):
             super().setup()
             self.connection.settimeout(10)
+        def do_GET(self):
+            self.send_error(405)  # Stateless JSON responses; no server-initiated SSE stream.
         def do_POST(self):
             if self.path != '/mcp':
                 self.send_error(404);return
@@ -55,7 +57,10 @@ def handler(accounts_file, store):
                 length=int(self.headers.get('Content-Length','0'))
                 if not 0 < length <= 262144:raise ValueError()
                 request=json.loads(self.rfile.read(length))
-                body=json.dumps(reply(request,owner,store)).encode()
+                result=dispatch(request,owner,store)
+                if result is None:
+                    self.send_response(202);self.send_header('Content-Length','0');self.end_headers();return
+                body=json.dumps(result).encode()
             except (ValueError,UnicodeError):
                 self.send_error(400);return
             self.send_response(200)

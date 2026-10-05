@@ -59,7 +59,7 @@ def main():
     p = argparse.ArgumentParser(description='Live text channels in your existing Claude/Codex chat; no new conversation.')
     sub = p.add_subparsers(dest='command', required=True)
     s = sub.add_parser('setup', help='Create a channel; install this Mac too when installation arguments are supplied.')
-    s.add_argument('--workspace', default=None, help='Workspace name from the invitation; preserved on an existing installation.'); s.add_argument('channel', nargs='?', default='team'); s.add_argument('--computer'); s.add_argument('--ssh-host'); s.add_argument('--credentials-file'); s.add_argument('--port', type=int, default=8787, help='Local tunnel port.'); s.add_argument('--relay-port', type=int, help='Relay listening port on the SSH host (default 8787 for new setup).'); s.add_argument('--harness', choices=['auto','both','claude','codex','none'], default='auto'); s.add_argument('--dry-run', action='store_true'); s.add_argument('--offline',action='store_true',help='Use the bundled Apple Silicon rescue snapshot explicitly; private server access is still required.')
+    s.add_argument('--local',action='store_true',help='Host a private workspace on this Mac; no SSH or imported credentials.'); s.add_argument('--workspace', default=None, help='Workspace name from the invitation; preserved on an existing installation.'); s.add_argument('channel', nargs='?', default='team'); s.add_argument('--computer'); s.add_argument('--ssh-host'); s.add_argument('--credentials-file'); s.add_argument('--port', type=int, default=8787, help='Local tunnel port.'); s.add_argument('--relay-port', type=int, help='Relay listening port on the SSH host (default 8787 for new setup).'); s.add_argument('--harness', choices=['auto','both','claude','codex','none'], default='auto'); s.add_argument('--dry-run', action='store_true'); s.add_argument('--offline',action='store_true',help='Use the bundled Apple Silicon rescue snapshot explicitly; private server access is still required.')
     j = sub.add_parser('join', help='Join a channel as this chat, using its renamed title when available.')
     j.add_argument('channel', nargs='?', default='team'); j.add_argument('--name'); j.add_argument('--title'); j.add_argument('--vendor', choices=['claude','codex']); j.add_argument('--dry-run', action='store_true'); j.add_argument('--no-config', action='store_true', help='Do not merge authorized Claude incoming/join settings.'); j.add_argument('--probe', action='store_true', help='Send another native receipt probe, even if already verified.')
     t = sub.add_parser('say', help='Post to a joined channel.'); t.add_argument('channel'); t.add_argument('text', nargs='+')
@@ -75,7 +75,7 @@ def main():
     invite.add_argument('--session')
     sub.add_parser('tui', help='Choose a joined conversation and generate its invitation interactively.')
     desktop = sub.add_parser('desktop', help='Configure desktop integrations; capability limits are reported explicitly.')
-    desktop.add_argument('action', choices=['install-claude','serve-events','init-events'])
+    desktop.add_argument('action', choices=['install-claude','serve-events','init-events','serve-chat'])
     desktop.add_argument('--dry-run', action='store_true')
     desktop.add_argument('--accounts-file', help='Private event account configuration.')
     desktop.add_argument('--account')
@@ -98,6 +98,13 @@ def main():
             return
         from event_server import main as serve
         serve(['--accounts-file', args.accounts_file, '--state-file', args.state_file, '--port', str(args.port), '--relay'])
+        return
+    if args.command == 'desktop' and args.action == 'serve-chat':
+        if not args.accounts_file or not args.state_file: raise ValueError('serve-chat requires --accounts-file and --state-file.')
+        if args.dry_run:
+            print(json.dumps({'writes':False,'bind':'127.0.0.1','port':args.port,'delivery':'On-demand remote MCP; public HTTPS required. No idle wake.'}));return
+        from remote_chat import main as serve
+        serve(['--accounts-file',args.accounts_file,'--state-file',args.state_file,'--port',str(args.port)])
         return
     if args.command == 'desktop':
         from desktop_setup import install_claude
@@ -123,15 +130,22 @@ def main():
         channel = channel_name(args.channel)
         installed = (CONFIG / 'stack.json').exists()
         if installed:
+            if args.local and __import__('connection').service_mode(HOME, json.loads((CONFIG/'stack.json').read_text())) != 'server': raise ValueError('Already configured for a remote workspace; refusing replacement.')
             existing=json.loads((CONFIG/'stack.json').read_text())
             for key,value in [('role',args.computer),('sshHost',args.ssh_host),('workspace',args.workspace),('relayPort',args.relay_port)]:
                 if value is not None and value != existing.get(key, 8787 if key == 'relayPort' else None):raise ValueError('Existing '+key+' differs; refusing replacement.')
             onboard.ensure_installed_runtime(offline=args.offline,dry_run=args.dry_run)
         if not installed:
-            if not args.computer or not args.ssh_host or not args.credentials_file:
+            local = args.local or (not args.ssh_host and not args.credentials_file)
+            if local:
+                import socket
+                if args.ssh_host or args.credentials_file: raise ValueError('--local cannot be combined with remote connection arguments.')
+                computer = args.computer or ('mac-' + slug(socket.gethostname().split('.')[0]))[:40].rstrip('-')
+                onboard.install(argparse.Namespace(name=computer, ssh_host=None, credentials_file=None, port=args.port, relay_port=args.port, workspace=args.workspace or computer+'-local', harness=args.harness, dry_run=args.dry_run, offline=args.offline, local=True))
+            elif not args.computer or not args.ssh_host or not args.credentials_file:
                 print(json.dumps({'status':'needs-input','writes':False,'missing':[key for key,value in [('computer',args.computer),('sshHost',args.ssh_host),('credentialsFile',args.credentials_file)] if not value],
                                   'next':'Ask the owner for only the missing private connection arguments, then repeat llmcom setup '+channel+'. Do not invent access or credentials.'},indent=2));raise SystemExit(2)
-            onboard.install(argparse.Namespace(name=args.computer, ssh_host=args.ssh_host, credentials_file=args.credentials_file, port=args.port, relay_port=args.relay_port or 8787, workspace=args.workspace or 'team', harness=args.harness, dry_run=args.dry_run, offline=args.offline))
+            if not local: onboard.install(argparse.Namespace(name=args.computer, ssh_host=args.ssh_host, credentials_file=args.credentials_file, port=args.port, relay_port=args.relay_port or 8787, workspace=args.workspace or 'team', harness=args.harness, dry_run=args.dry_run, offline=args.offline))
         if args.dry_run:
             print(json.dumps({'dryRun':True, 'writes':False, 'channel':channel, 'next':'Create channel; join it from the warmed chat.'})); return
         runtime('channel-create', channel)
@@ -150,7 +164,7 @@ def main():
         if args.dry_run or not session:
             print(json.dumps({'writes':False, 'insideConversation':bool(session), 'channel':channel, 'chatTitle':title, 'identity':name, 'joinCommand':'~/bin/llmcom join ' + channel, 'next':'Run through the warmed chat shell; its native title/address will be detected there.'}, indent=2)); return
         if not (CONFIG/'stack.json').exists():
-            print(json.dumps({'status':'needs-setup','writes':False,'next':'Run llmcom setup '+channel+'. If private connection details are missing, ask the owner only for those details.'}));raise SystemExit(2)
+            print(json.dumps({'status':'needs-setup','writes':False,'next':'For your own local workspace run llmcom setup '+channel+' --local, then join again. No SSH or credential file needed. To join someone else, use their invitation setup instead.'}));raise SystemExit(2)
         if vendor == 'claude' and not args.no_config:
             # The user-invoked join explicitly asks for incoming collaborator text.
             onboard.authorize_claude(name)

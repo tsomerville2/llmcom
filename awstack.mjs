@@ -23,6 +23,7 @@ async function provision() {
     const recovery = JSON.parse(fs.readFileSync(recoveryPath, 'utf8'));
     const created = await RelayCast.createWorkspace(config.workspace, {
       baseUrl: config.baseUrl, idempotencyKey: recovery.idempotencyKey,
+      ...(config.serviceMode === 'server' ? { bootstrapSecret: JSON.parse(fs.readFileSync(path.join(configDir, 'server-secret.json'), 'utf8')).bootstrapSecret } : {}),
       metadata: { purpose: 'Private laptop/Bertha collaboration', primaryRecall: 'navcom' },
     });
     secret = { apiKey: created.apiKey, workspaceId: created.workspaceId, agents: {} };

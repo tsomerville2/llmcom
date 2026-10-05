@@ -23,7 +23,7 @@ CONFIG = HOME / '.config/agentworkforce'
 STATE = HOME / '.local/state/agentworkforce'
 NODE_VERSION = '22.23.3'
 FILES = ['package.json', 'package-lock.json', 'runtime.mjs', 'cli.mjs', 'server.mjs', 'awstack', 'awstack.mjs',
-         'session.mjs', 'codex-session.mjs', 'channel.mjs', 'doctor.mjs', 'install-tools.py', 'onboard.py', 'rescue.py', 'SKILL.md', 'llmcom', 'llmcom.py', 'discovery.py', 'connection.py', 'tui.py', 'desktop_mcp.py', 'desktop_setup.py', 'mcp_events.py', 'event_protocol.py', 'event_tools.py', 'event_setup.py', 'event_server.py', 'event_worker.py', 'event_delivery.py', 'event_relay.mjs', 'LLMCOM-SKILL.md', 'VERSION']
+         'session.mjs', 'codex-session.mjs', 'channel.mjs', 'doctor.mjs', 'install-tools.py', 'onboard.py', 'rescue.py', 'SKILL.md', 'llmcom', 'llmcom.py', 'discovery.py', 'connection.py', 'tui.py', 'desktop_mcp.py', 'desktop_setup.py', 'mcp_events.py', 'event_protocol.py', 'event_tools.py', 'event_setup.py', 'event_server.py', 'remote_chat.py', 'event_worker.py', 'event_delivery.py', 'event_relay.mjs', 'LLMCOM-SKILL.md', 'VERSION']
 NODE_HASHES = {
     'arm64': '23b25245dcfb9af7262f8ff142e9e2e0af025368117329e7a7458a51e5922f53',
     'x64': '8a677b0219178efd6eb0e475457c4afb452b521a92f6e67845a73bd85727f2a8',
@@ -159,16 +159,17 @@ def authorize_claude(agent):
 
 def install(args):
     if not re.fullmatch(r'[a-z][a-z0-9-]{0,39}', args.name): raise ValueError('Name must be a short lowercase computer name.')
+    local = getattr(args, 'local', False)
     from connection import service_mode
     saved = json.loads((CONFIG / 'stack.json').read_text()) if (CONFIG / 'stack.json').exists() else {}
-    if service_mode(HOME, saved) == 'server': raise ValueError('This is a client installer; preserve the existing relay server and use its server runbook.')
-    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9@._:-]*', args.ssh_host): raise ValueError('Invalid SSH destination.')
+    if not local and service_mode(HOME, saved) == 'server': raise ValueError('This is a client installer; preserve the existing relay server and use its server runbook.')
+    if not local and not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9@._:-]*', args.ssh_host): raise ValueError('Invalid SSH destination.')
     relay_port = getattr(args, 'relay_port', 8787)
     if not 1 <= relay_port <= 65535: raise ValueError('Invalid relay port.')
     if not 1024 <= args.port <= 65535: raise ValueError('Invalid port.')
-    if not args.credentials_file and not (CONFIG / 'workspace.json').exists(): raise ValueError('Provide a private workspace credential file with --credentials-file.')
+    if not local and not args.credentials_file and not (CONFIG / 'workspace.json').exists(): raise ValueError('Provide a private workspace credential file with --credentials-file.')
     if args.dry_run:
-        print(json.dumps({'dryRun': True, 'writes': False, 'name': args.name, 'sshHost': args.ssh_host, 'port': args.port, 'pinnedNode': NODE_VERSION, 'harness': args.harness, 'offline':getattr(args,'offline',False), 'next': 'install packages → private credentials → persistent tunnel/broker → MCP/skill → join current chat → active and idle proof'}, indent=2)); return
+        print(json.dumps({'dryRun': True, 'writes': False, 'name': args.name, 'sshHost': args.ssh_host, 'port': args.port, 'pinnedNode': NODE_VERSION, 'harness': args.harness, 'offline':getattr(args,'offline',False), 'serviceMode': 'server' if local else 'client', 'next': 'Install local relay and generate private workspace credentials' if local else 'Install client tunnel and import private credentials'}, indent=2)); return
     if platform.system() != 'Darwin': raise ValueError('This installer is currently macOS only.')
     # Fail on wrapper collisions and role changes before downloading or overwriting anything.
     for name in ['agent-relay', 'ai-hist', 'ai-hist-mcp', 'trail', 'flows', 'relaycast-mcp', 'awstack', 'llmcom']:
@@ -184,7 +185,12 @@ def install(args):
         current = json.loads((CONFIG / 'workspace.json').read_text()) if (CONFIG / 'workspace.json').exists() else {}
         if current and current.get('apiKey') != given['apiKey']: raise ValueError('Already joined to another workspace; refusing replacement.')
     # Check SSH access before service installation; does not add keys or change server access.
-    run(['/usr/bin/ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', args.ssh_host, 'true'])
+    if not local: run(['/usr/bin/ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', args.ssh_host, 'true'])
+    elif not saved:
+        import socket
+        with socket.socket() as probe:
+            try: probe.bind(('127.0.0.1', args.port))
+            except OSError: raise ValueError('Local relay port is busy. Choose another --port; no existing service was changed.')
     offline = getattr(args,'offline',False)
     if offline:
         import rescue
@@ -208,10 +214,12 @@ def install(args):
         try: run([ROOT / 'node/bin/npm', 'ci', '--no-audit', '--no-fund'], cwd=STACK, env=tool_environment())
         except subprocess.CalledProcessError:
             raise ValueError('Upstream installation failed. Diagnose the npm error, or explicitly use llmcom setup CHANNEL --offline with the same private setup arguments. No automatic fallback occurred.')
-    run(['/usr/bin/python3', STACK / 'install-tools.py', args.name, '--ssh-host', args.ssh_host, '--port', args.port, '--relay-port', relay_port, '--workspace', args.workspace])
+    install_args = ['/usr/bin/python3', STACK / 'install-tools.py', args.name, '--port', args.port, '--relay-port', relay_port, '--workspace', args.workspace]
+    install_args += ['--local'] if local else ['--ssh-host', args.ssh_host]
+    run(install_args)
     if args.credentials_file: import_credentials(args.credentials_file)
     domain = 'gui/' + str(os.getuid())
-    labels = ['com.exp31.agentworkforce.tunnel', 'com.exp31.agentworkforce.' + args.name + '.broker']
+    labels = ['com.exp31.agentworkforce.' + ('server' if local else 'tunnel'), 'com.exp31.agentworkforce.' + args.name + '.broker']
     first = HOME / 'Library/LaunchAgents' / (labels[0] + '.plist')
     if subprocess.run(['launchctl', 'print', domain + '/' + labels[0]], capture_output=True).returncode != 0:
         run(['launchctl', 'bootstrap', domain, first])

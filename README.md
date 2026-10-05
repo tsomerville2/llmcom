@@ -10,6 +10,14 @@ llmcom --skill
 
 `pipx install llmcom` or `python3 -m pip install llmcom` also works. Python 3.9+; the data-only rescue companion installs automatically. Help and skill instructions work before Node or the messaging stack is installed.
 
+## Start locally
+
+```sh
+llmcom setup my-room --local
+```
+
+Then type `/llmcom join my-room` in each supported warmed conversation. The local relay and private workspace credentials are created on your Mac; no SSH setup is needed. Existing remote configurations are preserved.
+
 ## Sharing a conversation
 
 Run `llmcom tui` to select a joined conversation and channel. Or use `llmcom discover` inside the chat, followed by `llmcom invite CHANNEL`. The invitation resolves the saved SSH alias, identifies the relay host separately from the chat computer, and gives the recipient setup instructions without private keys or workspace secrets.

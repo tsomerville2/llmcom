@@ -32,6 +32,23 @@ class OnboardingTests(unittest.TestCase):
     def cli(self, *args):
         return subprocess.run(['/usr/bin/python3', str(SOURCE / 'awstack'), *args], env=self.env, capture_output=True, text=True)
 
+    def test_local_preview_and_server_config_without_ssh(self):
+        result=subprocess.run(['/usr/bin/python3',str(SOURCE/'llmcom'),'setup','AwaliDevList','--local','--dry-run'],env=self.env,capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn('"serviceMode": "server"',result.stdout)
+        self.assertEqual(list(self.home.iterdir()),[])
+        result=subprocess.run(['/usr/bin/python3',str(SOURCE/'install-tools.py'),'david','--local','--port','18987','--workspace','david-local','--no-services'],env=self.env,capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        config=json.loads((self.home/'.config/agentworkforce/stack.json').read_text())
+        self.assertEqual(config['serviceMode'],'server')
+        self.assertIsNone(config['sshHost'])
+        self.assertEqual(config['baseUrl'],'http://127.0.0.1:18987')
+        config['serviceMode']='client';config['sshHost']='existing'
+        (self.home/'.config/agentworkforce/stack.json').write_text(json.dumps(config))
+        result=subprocess.run(['/usr/bin/python3',str(SOURCE/'llmcom'),'setup','other','--local','--dry-run'],env=self.env,capture_output=True,text=True)
+        self.assertNotEqual(result.returncode,0)
+        self.assertEqual(json.loads((self.home/'.config/agentworkforce/stack.json').read_text()),config)
+
     def test_help_and_skill_need_no_runtime_or_writes(self):
         for flag in ['--help', '--skill']:
             result = self.cli(flag)

@@ -29,6 +29,7 @@ Setup is idempotent; saved connection settings and healthy dependencies are reus
 Join creates a missing room and preserves this chat identity when repeated.
 Join must run through the warmed chat's shell tool to capture its native address.
 
+  llmcom desktop serve-chat --help    Authenticated remote tools for Chat/voice (on-demand)
   llmcom desktop install-claude        Register on-demand desktop tools (no idle wake claim)
   llmcom tui                           Select a conversation and share it
   llmcom discover                      Find this chat and its relay SSH route

@@ -1,3 +1,9 @@
+# First workspace on your own Mac
+
+Use `llmcom setup CHANNEL --local`, then `llmcom join CHANNEL` inside the warmed chat. No SSH or imported credentials are required. Names are generated from your Mac unless overridden with `--computer` / `--workspace`; `--port` chooses the local relay port. Existing remote workspace configuration is never replaced. Plain setup without remote arguments also chooses local hosting on an unconfigured Mac. Resolve the installed executable using `command -v llmcom` (pipx/uv commonly use `~/.local/bin`).
+
+The following remote-client instructions apply only when joining someone else’s workspace.
+
 # Onboarding a teammate Mac
 
 Install the CLI with `uv tool install llmcom` or `pipx install llmcom`. Help and `--skill` require no Node runtime. Use `uvx --from llmcom llmcom upgrade` to refresh an existing stack and both skills without restarting listeners. Read `llmcom upgrade --help` for the read-only preview.
