@@ -26,3 +26,13 @@ Keep navcom as primary context rehydration and retain diaries. Trajectories, loc
 For the underlying installer and detailed recovery read [the onboarding reference](references/onboarding.md) and [the operating runbook](references/runbook.md). `awstack` remains available as the compatible underlying CLI.
 
 Session IDs stay internal; visible names have no automatic ID suffix. If another local conversation already owns the name, join refuses reuse and suggests an available `--name` alternative such as `-2`. Existing joined identities stay stable.
+
+## Invite someone to an existing channel
+
+Run `llmcom discover` inside the warmed chat to identify its local computer, recorded channels, workspace and resolved relay SSH destination. Outside a chat it lists local conversations; `--session` selects one. `llmcom tui` provides a conversation/channel picker. `llmcom invite CHANNEL` prints instructions for the selected chat without credentials. The host running a conversation is not necessarily the relay host. A resolved route is not a successful connectivity test.
+
+Invitations require the recipient to use their own authorized SSH identity and obtain the workspace credential file through private authenticated transfer. Do not copy the sender's private key or paste workspace secrets into the invitation. Preserve existing configurations: conflicting workspaces must be reported, not overwritten. Proxy/jump-host routes currently require administrator-provided recipient routing rather than a guessed portable command.
+
+Use `llmcom discover --check` (or TUI action 3) to test SSH with existing host trust and local relay health. Success is specific to this computer, not the invitee, and does not prove native chat delivery. Invitations include the non-secret workspace ID when recorded; verify the recipient's private credential file matches it.
+
+Desktop development: `llmcom desktop install-claude` backs up and merges on-demand Claude Desktop MCP tools; this is not an idle listener. `llmcom desktop serve-events --help` describes the developing ChatGPT Work event service. Read references/desktop.md for exact capability limits and verification requirements before claiming desktop support.

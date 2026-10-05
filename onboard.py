@@ -23,7 +23,7 @@ CONFIG = HOME / '.config/agentworkforce'
 STATE = HOME / '.local/state/agentworkforce'
 NODE_VERSION = '22.23.3'
 FILES = ['package.json', 'package-lock.json', 'runtime.mjs', 'cli.mjs', 'server.mjs', 'awstack', 'awstack.mjs',
-         'session.mjs', 'codex-session.mjs', 'channel.mjs', 'doctor.mjs', 'install-tools.py', 'onboard.py', 'rescue.py', 'SKILL.md', 'llmcom', 'llmcom.py', 'LLMCOM-SKILL.md', 'VERSION']
+         'session.mjs', 'codex-session.mjs', 'channel.mjs', 'doctor.mjs', 'install-tools.py', 'onboard.py', 'rescue.py', 'SKILL.md', 'llmcom', 'llmcom.py', 'discovery.py', 'connection.py', 'tui.py', 'desktop_mcp.py', 'desktop_setup.py', 'mcp_events.py', 'event_protocol.py', 'event_tools.py', 'event_server.py', 'event_worker.py', 'event_delivery.py', 'event_relay.mjs', 'LLMCOM-SKILL.md', 'VERSION']
 NODE_HASHES = {
     'arm64': '23b25245dcfb9af7262f8ff142e9e2e0af025368117329e7a7458a51e5922f53',
     'x64': '8a677b0219178efd6eb0e475457c4afb452b521a92f6e67845a73bd85727f2a8',
@@ -53,7 +53,9 @@ def run(args, **kwargs):
     return subprocess.run([str(x) for x in args], check=True, **kwargs)
 
 def tool_environment():
-    return {**os.environ, 'PATH': str(ROOT / 'node/bin') + ':' + str(HOME / 'bin') + ':' + os.environ.get('PATH', ''), 'DO_NOT_TRACK': '1'}
+    environment = {**os.environ, 'PATH': str(ROOT / 'node/bin') + ':' + str(HOME / 'bin') + ':' + os.environ.get('PATH', ''), 'DO_NOT_TRACK': '1'}
+    environment.pop('NODE_OPTIONS', None)
+    return environment
 
 def wait_health(url):
     deadline = time.monotonic() + 25
@@ -157,8 +159,12 @@ def authorize_claude(agent):
 
 def install(args):
     if not re.fullmatch(r'[a-z][a-z0-9-]{0,39}', args.name): raise ValueError('Name must be a short lowercase computer name.')
-    if args.name == 'bertha': raise ValueError('This is a client installer; Bertha server changes use the server runbook.')
+    from connection import service_mode
+    saved = json.loads((CONFIG / 'stack.json').read_text()) if (CONFIG / 'stack.json').exists() else {}
+    if service_mode(HOME, saved) == 'server': raise ValueError('This is a client installer; preserve the existing relay server and use its server runbook.')
     if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9@._:-]*', args.ssh_host): raise ValueError('Invalid SSH destination.')
+    relay_port = getattr(args, 'relay_port', 8787)
+    if not 1 <= relay_port <= 65535: raise ValueError('Invalid relay port.')
     if not 1024 <= args.port <= 65535: raise ValueError('Invalid port.')
     if not args.credentials_file and not (CONFIG / 'workspace.json').exists(): raise ValueError('Provide a private workspace credential file with --credentials-file.')
     if args.dry_run:
@@ -202,7 +208,7 @@ def install(args):
         try: run([ROOT / 'node/bin/npm', 'ci', '--no-audit', '--no-fund'], cwd=STACK, env=tool_environment())
         except subprocess.CalledProcessError:
             raise ValueError('Upstream installation failed. Diagnose the npm error, or explicitly use llmcom setup CHANNEL --offline with the same private setup arguments. No automatic fallback occurred.')
-    run(['/usr/bin/python3', STACK / 'install-tools.py', args.name, '--ssh-host', args.ssh_host, '--port', args.port, '--workspace', args.workspace])
+    run(['/usr/bin/python3', STACK / 'install-tools.py', args.name, '--ssh-host', args.ssh_host, '--port', args.port, '--relay-port', relay_port, '--workspace', args.workspace])
     if args.credentials_file: import_credentials(args.credentials_file)
     domain = 'gui/' + str(os.getuid())
     labels = ['com.exp31.agentworkforce.tunnel', 'com.exp31.agentworkforce.' + args.name + '.broker']
@@ -333,7 +339,7 @@ def repair(args):
             if file.exists(): file.chmod(0o600)
     domain = 'gui/' + str(os.getuid())
     labels = []
-    if 'engine-health' in failed: labels.append('com.exp31.agentworkforce.' + ('server' if config['role'] == 'bertha' else 'tunnel'))
+    if 'engine-health' in failed: labels.append('com.exp31.agentworkforce.' + ('server' if __import__('connection').service_mode(HOME, config) == 'server' else 'tunnel'))
     for label in labels:
         file = HOME / 'Library/LaunchAgents' / (label + '.plist')
         if not file.exists(): raise ValueError('Service definition missing; rerun the installer with the existing configuration.')
@@ -353,7 +359,7 @@ def repair(args):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__); sub = p.add_subparsers(dest='command', required=True)
-    i = sub.add_parser('install'); i.add_argument('--name', required=True); i.add_argument('--ssh-host', required=True); i.add_argument('--credentials-file'); i.add_argument('--port', type=int, default=8787); i.add_argument('--workspace', default='exp31-collaboration'); i.add_argument('--harness', choices=['auto','both','claude','codex','none'], default='auto'); i.add_argument('--dry-run', action='store_true'); i.add_argument('--offline',action='store_true',help='Explicitly use vendored Apple Silicon runtime/dependencies without GitHub/npm downloads.')
+    i = sub.add_parser('install'); i.add_argument('--name', required=True); i.add_argument('--ssh-host', required=True); i.add_argument('--credentials-file'); i.add_argument('--port', type=int, default=8787); i.add_argument('--relay-port', type=int, default=8787); i.add_argument('--workspace', default='exp31-collaboration'); i.add_argument('--harness', choices=['auto','both','claude','codex','none'], default='auto'); i.add_argument('--dry-run', action='store_true'); i.add_argument('--offline',action='store_true',help='Explicitly use vendored Apple Silicon runtime/dependencies without GitHub/npm downloads.')
     sub.add_parser('doctor'); sub.add_parser('install-skill')
     u = sub.add_parser('upgrade'); u.add_argument('--dry-run', action='store_true')
     r = sub.add_parser('repair'); r.add_argument('--dry-run', action='store_true')

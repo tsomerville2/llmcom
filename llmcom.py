@@ -51,13 +51,15 @@ def generated_name(title, username, vendor):
 def runtime(*args):
     if not NODE.exists() or not (CONFIG / 'stack.json').exists():
         raise ValueError('This Mac is not set up. Run llmcom setup --help for the installation arguments.')
-    return subprocess.run([str(NODE), str(STACK / 'awstack.mjs'), *args], check=True)
+    environment = dict(os.environ)
+    environment.pop('NODE_OPTIONS', None)
+    return subprocess.run([str(NODE), str(STACK / 'awstack.mjs'), *args], check=True, env=environment)
 
 def main():
     p = argparse.ArgumentParser(description='Live text channels in your existing Claude/Codex chat; no new conversation.')
     sub = p.add_subparsers(dest='command', required=True)
     s = sub.add_parser('setup', help='Create a channel; install this Mac too when installation arguments are supplied.')
-    s.add_argument('channel', nargs='?', default='team'); s.add_argument('--computer'); s.add_argument('--ssh-host'); s.add_argument('--credentials-file'); s.add_argument('--port', type=int, default=8787); s.add_argument('--harness', choices=['auto','both','claude','codex','none'], default='auto'); s.add_argument('--dry-run', action='store_true'); s.add_argument('--offline',action='store_true',help='Use the bundled Apple Silicon rescue snapshot explicitly; private server access is still required.')
+    s.add_argument('--workspace', default=None, help='Workspace name from the invitation; preserved on an existing installation.'); s.add_argument('channel', nargs='?', default='team'); s.add_argument('--computer'); s.add_argument('--ssh-host'); s.add_argument('--credentials-file'); s.add_argument('--port', type=int, default=8787, help='Local tunnel port.'); s.add_argument('--relay-port', type=int, help='Relay listening port on the SSH host (default 8787 for new setup).'); s.add_argument('--harness', choices=['auto','both','claude','codex','none'], default='auto'); s.add_argument('--dry-run', action='store_true'); s.add_argument('--offline',action='store_true',help='Use the bundled Apple Silicon rescue snapshot explicitly; private server access is still required.')
     j = sub.add_parser('join', help='Join a channel as this chat, using its renamed title when available.')
     j.add_argument('channel', nargs='?', default='team'); j.add_argument('--name'); j.add_argument('--title'); j.add_argument('--vendor', choices=['claude','codex']); j.add_argument('--dry-run', action='store_true'); j.add_argument('--no-config', action='store_true', help='Do not merge authorized Claude incoming/join settings.'); j.add_argument('--probe', action='store_true', help='Send another native receipt probe, even if already verified.')
     t = sub.add_parser('say', help='Post to a joined channel.'); t.add_argument('channel'); t.add_argument('text', nargs='+')
@@ -65,20 +67,62 @@ def main():
     for command in ['status','doctor','sessions','leave','verify','channels']: sub.add_parser(command)
     a = sub.add_parser('ack'); a.add_argument('nonce')
     r = sub.add_parser('repair'); r.add_argument('--dry-run', action='store_true')
+    info = sub.add_parser('discover', help='Show saved relay host, SSH ports and conversations without credentials.')
+    info.add_argument('--check', action='store_true', help='Check SSH with existing trust and local relay health; does not send chat messages.')
+    info.add_argument('--session', help='Select a local conversation by session ID; defaults to this chat when available.')
+    invite = sub.add_parser('invite', help='Print credential-free instructions for a teammate to join a recorded channel.')
+    invite.add_argument('channel')
+    invite.add_argument('--session')
+    sub.add_parser('tui', help='Choose a joined conversation and generate its invitation interactively.')
+    desktop = sub.add_parser('desktop', help='Configure desktop integrations; capability limits are reported explicitly.')
+    desktop.add_argument('action', choices=['install-claude','serve-events'])
+    desktop.add_argument('--dry-run', action='store_true')
+    desktop.add_argument('--accounts-file', help='Private event account configuration.')
+    desktop.add_argument('--state-file', help='Private persistent event database.')
+    desktop.add_argument('--port', type=int, default=8790)
     args = p.parse_args()
+    if args.command == 'desktop' and args.action == 'serve-events':
+        if not args.accounts_file or not args.state_file:
+            raise ValueError('serve-events requires --accounts-file and --state-file; see references/desktop.md.')
+        if args.dry_run:
+            print(json.dumps({'writes':False,'bind':'127.0.0.1','port':args.port,'delivery':'MCP Events; authenticated HTTPS ingress and subscribed ChatGPT Work chat still required.'}))
+            return
+        from event_server import main as serve
+        serve(['--accounts-file', args.accounts_file, '--state-file', args.state_file, '--port', str(args.port), '--relay'])
+        return
+    if args.command == 'desktop':
+        from desktop_setup import install_claude
+        print(json.dumps(install_claude(HOME, Path(__file__).parent / 'desktop_mcp.py', args.dry_run), indent=2))
+        return
+    if args.command == 'tui':
+        from tui import run
+        run(CONFIG)
+        return
+    if args.command == 'invite':
+        from discovery import discover, invitation
+        print(invitation(discover(CONFIG, args.session or os.environ.get('CODEX_THREAD_ID') or os.environ.get('CLAUDE_CODE_SESSION_ID')), channel_name(args.channel)))
+        return
+    if args.command == 'discover':
+        from discovery import discover, check_connection
+        result = discover(CONFIG, args.session or os.environ.get('CODEX_THREAD_ID') or os.environ.get('CLAUDE_CODE_SESSION_ID'))
+        if args.check:
+            result['checks'] = check_connection(result)
+            result['reachability'] = 'Checked from this computer only; see checks. Recipient access is independent.'
+        print(json.dumps(result, indent=2))
+        return
     if args.command == 'setup':
         channel = channel_name(args.channel)
         installed = (CONFIG / 'stack.json').exists()
         if installed:
             existing=json.loads((CONFIG/'stack.json').read_text())
-            for key,value in [('role',args.computer),('sshHost',args.ssh_host)]:
-                if value is not None and value != existing.get(key):raise ValueError('Existing '+key+' differs; refusing replacement.')
+            for key,value in [('role',args.computer),('sshHost',args.ssh_host),('workspace',args.workspace),('relayPort',args.relay_port)]:
+                if value is not None and value != existing.get(key, 8787 if key == 'relayPort' else None):raise ValueError('Existing '+key+' differs; refusing replacement.')
             onboard.ensure_installed_runtime(offline=args.offline,dry_run=args.dry_run)
         if not installed:
             if not args.computer or not args.ssh_host or not args.credentials_file:
                 print(json.dumps({'status':'needs-input','writes':False,'missing':[key for key,value in [('computer',args.computer),('sshHost',args.ssh_host),('credentialsFile',args.credentials_file)] if not value],
                                   'next':'Ask the owner for only the missing private connection arguments, then repeat llmcom setup '+channel+'. Do not invent access or credentials.'},indent=2));raise SystemExit(2)
-            onboard.install(argparse.Namespace(name=args.computer, ssh_host=args.ssh_host, credentials_file=args.credentials_file, port=args.port, workspace='exp31-collaboration', harness=args.harness, dry_run=args.dry_run, offline=args.offline))
+            onboard.install(argparse.Namespace(name=args.computer, ssh_host=args.ssh_host, credentials_file=args.credentials_file, port=args.port, relay_port=args.relay_port or 8787, workspace=args.workspace or 'team', harness=args.harness, dry_run=args.dry_run, offline=args.offline))
         if args.dry_run:
             print(json.dumps({'dryRun':True, 'writes':False, 'channel':channel, 'next':'Create channel; join it from the warmed chat.'})); return
         runtime('channel-create', channel)

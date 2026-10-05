@@ -16,7 +16,7 @@ tree = ast.parse((source / 'onboard.py').read_text())
 files = next(ast.literal_eval(n.value) for n in tree.body if isinstance(n, ast.Assign)
              and any(isinstance(t, ast.Name) and t.id == 'FILES' for t in n.targets))
 files += ['pyproject.toml', 'hatch_build.py', 'LICENSE', 'README.md', 'export-repo.py',
-          'vendor.py', 'test_onboarding.py', 'test_session.mjs', 'test_listener.mjs', 'test_rescue.py', 'test_channel.mjs']
+          'vendor.py', 'test_onboarding.py', 'test_session.mjs', 'test_listener.mjs', 'test_rescue.py', 'test_channel.mjs', 'test_discovery.py', 'test_connection.py', 'test_desktop_mcp.py', 'test_desktop_setup.py', 'test_mcp_events.py', 'test_event_protocol.py', 'test_event_server.py', 'test_event_delivery.py', 'test_event_tools.py', 'test_tui.py']
 paths = [Path(name) for name in files]
 for folder, pattern in [('src/llmcom', '*.py'), ('references', '*.md'), ('flows', '*.ts'), ('.github/workflows', '*.yml')]:
     paths += [p.relative_to(source) for p in (source / folder).glob(pattern)]
