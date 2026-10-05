@@ -78,7 +78,7 @@ class OnboardingTests(unittest.TestCase):
         self.assertEqual(target.read_text(), 'unrelated'); self.assertFalse(self.module.CONFIG.exists())
 
     def test_install_preserves_settings_and_rejects_role_switch(self):
-        self.module.private_json(self.module.CONFIG / 'stack.json', {'role':'alice', 'workspace':'existing', 'custom':{'keep':True}})
+        self.module.private_json(self.module.CONFIG / 'stack.json', {'role':'alice', 'sshHost':'relay.example', 'workspace':'existing', 'custom':{'keep':True}})
         command = ['/usr/bin/python3', str(SOURCE / 'install-tools.py'), 'alice', '--no-services']
         subprocess.run(command, env=self.env, check=True, capture_output=True)
         data = json.loads((self.module.CONFIG / 'stack.json').read_text())
@@ -126,7 +126,7 @@ class OnboardingTests(unittest.TestCase):
 
     def test_upgrade_is_read_only_in_preview_and_retains_sessions(self):
         m = self.module
-        m.private_json(m.CONFIG / 'stack.json', {'role':'alice', 'workspace':'existing', 'custom':{'keep':True}})
+        m.private_json(m.CONFIG / 'stack.json', {'role':'alice', 'sshHost':'relay.example', 'workspace':'existing', 'custom':{'keep':True}})
         m.STACK.mkdir(parents=True)
         (m.STACK / 'package-lock.json').write_bytes((SOURCE / 'package-lock.json').read_bytes())
         record = m.CONFIG / 'sessions/native.json'

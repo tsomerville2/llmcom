@@ -29,6 +29,10 @@ Setup is idempotent; saved connection settings and healthy dependencies are reus
 Join creates a missing room and preserves this chat identity when repeated.
 Join must run through the warmed chat's shell tool to capture its native address.
 
+  llmcom desktop install-claude        Register on-demand desktop tools (no idle wake claim)
+  llmcom tui                           Select a conversation and share it
+  llmcom discover                      Find this chat and its relay SSH route
+  llmcom invite CHANNEL                Print portable teammate instructions
   llmcom --skill                       Instructions for any LLM, even before installation
   llmcom --version                     Installed CLI release
   llmcom upgrade                       Apply this release to an existing stack and skills
@@ -54,7 +58,7 @@ Then use /llmcom join channel-A inside the existing chat.
 Setup reuses existing settings and healthy dependencies. Join creates missing rooms.
 
 Claude join merges the authorized incoming-text config, preserving tool permission mode.
-Existing identities remain stable; new names use username-harness-title-session8.
+Existing identities remain stable; new names use username-harness-title.
 Channels share messages only with joined chats; your own posts are not echoed into you.
 Legacy `awstack` commands remain compatible. Current native adapters: Claude and Codex/macOS.
 ''')
