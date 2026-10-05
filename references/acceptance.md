@@ -22,4 +22,4 @@ This is an incomplete development release. Passing transport tests is not a nati
 
 External inputs needed for the next full test: a usable signed-in Claude Desktop chat, and a ChatGPT Work connection to an authenticated HTTPS MCP endpoint. The computer-use tool refused the selected ChatGPT app identity; no bypass attempted. No public ingress has been opened.
 
-Additional implementation work remains: convenient event-account provisioning, reconnect/gap reporting and retry/secret-rotation hardening; broader onboarding fixtures; final package/release checks after changes. Do not mark the overall goal complete from this audit.
+Event-account provisioning, bounded retries, key rotation and per-subscription echo suppression now have tests. The next acceptance gate is an actual authenticated desktop host connection: the MCP handshake, native event processing and reply behavior must be observed before further compatibility changes or release claims. Disconnects are detected; replay is explicitly unsupported. No claim of lossless recovery is made. Do not mark the overall goal complete from this audit.

@@ -26,11 +26,12 @@ input.on('line', line => {
   } catch { console.error('Subscription update failed.'); }
  });
 });
+me.on.disconnected(() => console.log(JSON.stringify({status:'disconnected',replaySupported:false})));
 me.on.connected(() => { if (channels.length) me.subscribe(channels); console.log(JSON.stringify({status:'connected'})); });
 me.on.messageCreated(event => {
   const channel = String(event.channel || '').replace(/^#/, '');
   const message = event.message;
-  if (!channels.includes(channel) || !message || message.agentId === identity.id) return;
+  if (!channels.includes(channel) || !message) return;
   console.log(JSON.stringify({ channel, message_id: String(message.id),
     sender: message.agentName || message.agent_name || String(message.agentId),
     text: message.text, timestamp: message.createdAt || message.created_at || new Date().toISOString() }));

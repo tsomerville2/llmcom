@@ -75,12 +75,21 @@ def main():
     invite.add_argument('--session')
     sub.add_parser('tui', help='Choose a joined conversation and generate its invitation interactively.')
     desktop = sub.add_parser('desktop', help='Configure desktop integrations; capability limits are reported explicitly.')
-    desktop.add_argument('action', choices=['install-claude','serve-events'])
+    desktop.add_argument('action', choices=['install-claude','serve-events','init-events'])
     desktop.add_argument('--dry-run', action='store_true')
     desktop.add_argument('--accounts-file', help='Private event account configuration.')
+    desktop.add_argument('--account')
+    desktop.add_argument('--channel', action='append', default=[])
+    desktop.add_argument('--token-file')
     desktop.add_argument('--state-file', help='Private persistent event database.')
     desktop.add_argument('--port', type=int, default=8790)
     args = p.parse_args()
+    if args.command == 'desktop' and args.action == 'init-events':
+        if not args.accounts_file or not args.token_file or not args.account:
+            raise ValueError('init-events requires --accounts-file, --token-file, --account and --channel.')
+        from event_setup import provision
+        print(json.dumps(provision(args.accounts_file,args.token_file,args.account,args.channel,args.dry_run),indent=2))
+        return
     if args.command == 'desktop' and args.action == 'serve-events':
         if not args.accounts_file or not args.state_file:
             raise ValueError('serve-events requires --accounts-file and --state-file; see references/desktop.md.')

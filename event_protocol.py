@@ -8,8 +8,8 @@ EVENT = {
     'delivery':['webhook'],
     'inputSchema':{'type':'object','properties':{'channel':{'type':'string'}},'required':['channel'],'additionalProperties':False},
     'payloadSchema':{'type':'object','properties':{
-        'channel':{'type':'string'},'message_id':{'type':'string'},'sender':{'type':'string'},'text':{'type':'string'}},
-        'required':['channel','message_id','sender','text'],'additionalProperties':False}
+        'subscription_id':{'type':'string'},'channel':{'type':'string'},'message_id':{'type':'string'},'sender':{'type':'string'},'text':{'type':'string'}},
+        'required':['subscription_id','channel','message_id','sender','text'],'additionalProperties':False}
 }
 
 

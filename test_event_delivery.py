@@ -31,4 +31,21 @@ class DeliveryTests(unittest.TestCase):
             self.assertEqual(store.db.execute("SELECT status FROM deliveries WHERE event_id='relay_124'").fetchone()[0],'cancelled')
             store.close()
 
+
+class MultiChatTests(unittest.TestCase):
+    def test_reply_reaches_other_account_without_self_echo(self):
+        from event_tools import call_tool
+        with tempfile.TemporaryDirectory() as directory:
+            def post(url,body,headers):return 200,json.dumps({'challenge':json.loads(body).get('challenge')}).encode()
+            store=SubscriptionStore(Path(directory)/'s.db',lambda *a:True,post)
+            ids={}
+            for owner in ['alice','bob']:
+                ids[owner]=store.subscribe('shared-account',{'name':'message.created','arguments':{'channel':'design'},'delivery':{'mode':'webhook','url':'https://example.com/'+owner,'secret':'whsec_'+base64.b64encode(b'x'*32).decode()}})
+            call_tool('shared-account',{'name':'llmcom_say','arguments':{'channel':'design','text':'hello bob','request_id':'test-origin','subscription_id':ids['alice']['id']}},store,lambda *a:{'sent':True,'id':'321'})
+            queue=Outbox(store)
+            queue.enqueue('design','321','bridge-identity','hello bob','2026-10-05T12:00:00Z')
+            rows=store.db.execute('SELECT s.url FROM deliveries d JOIN subscriptions s ON s.id=d.subscription').fetchall()
+            self.assertEqual(rows,[('https://example.com/bob',)])
+            store.close()
+
 if __name__=='__main__':unittest.main()

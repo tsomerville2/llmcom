@@ -20,6 +20,8 @@ class RelayWorker:
         self.events=queue.Queue(maxsize=1000)
         self.stopped=threading.Event()
         self.channels=None
+        self.connected=False
+        self.gap_observed=False
         self.reader=threading.Thread(target=self.read,daemon=True);self.reader.start()
 
     def read(self):
@@ -43,6 +45,10 @@ class RelayWorker:
         for _ in range(100):
             try:event=self.events.get_nowait()
             except queue.Empty:break
+            if event.get('status')=='connected':
+                self.connected=True;continue
+            if event.get('status')=='disconnected':
+                self.connected=False;self.gap_observed=True;continue
             try:self.outbox.enqueue(event['channel'],event['message_id'],event['sender'],event['text'],event['timestamp'])
             except (KeyError,ValueError,TypeError):continue
         self.outbox.deliver_one()

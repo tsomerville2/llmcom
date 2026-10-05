@@ -71,4 +71,26 @@ class SubscriptionTests(unittest.TestCase):
             self.assertEqual(store.matching('design'),[])
             store.close()
 
+
+class RotationTests(unittest.TestCase):
+    def test_refresh_signs_with_both_keys_for_bounded_window(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from mcp_events import SubscriptionStore
+        now=[1000]
+        with tempfile.TemporaryDirectory() as directory:
+            store=SubscriptionStore(Path(directory)/'s.db',lambda *a:True,lambda u,b,h:(200,json.dumps({'challenge':json.loads(b)['challenge']}).encode()),lambda:now[0])
+            params={'name':'message.created','arguments':{'channel':'design'},'delivery':{'mode':'webhook','url':'https://example.com/c','secret':'whsec_'+base64.b64encode(b'a'*32).decode()}}
+            original=store.subscribe('alice',params)
+            params['delivery']['secret']='whsec_'+base64.b64encode(b'b'*32).decode()
+            self.assertEqual(original['id'],store.subscribe('alice',params)['id'])
+            event={'eventId':'one','data':{}}
+            _,headers=signed_request(store.matching('design')[0],event,now[0])
+            self.assertEqual(len(headers['webhook-signature'].split()),2)
+            now[0]+=301
+            _,headers=signed_request(store.matching('design')[0],event,now[0])
+            self.assertEqual(len(headers['webhook-signature'].split()),1)
+            store.close()
+
 if __name__ == '__main__': unittest.main()

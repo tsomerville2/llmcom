@@ -35,8 +35,12 @@ def signed_request(subscription, event, signed_at=None):
     event_id = event['eventId']
     signature = base64.b64encode(hmac.new(signing_key(subscription['secret']),
         event_id.encode() + b'.' + timestamp.encode() + b'.' + body, hashlib.sha256).digest()).decode()
+    signatures = 'v1,' + signature
+    if subscription.get('previousSecret'):
+        previous = base64.b64encode(hmac.new(signing_key(subscription['previousSecret']), event_id.encode() + b'.' + timestamp.encode() + b'.' + body, hashlib.sha256).digest()).decode()
+        signatures += ' v1,' + previous
     return body, {'Content-Type': 'application/json', 'webhook-id': event_id,
-        'webhook-timestamp': timestamp, 'webhook-signature': 'v1,' + signature,
+        'webhook-timestamp': timestamp, 'webhook-signature': signatures,
         'X-MCP-Subscription-Id': subscription['id']}
 
 
@@ -99,6 +103,9 @@ class SubscriptionStore:
         os.chmod(file, 0o600)
         self.db = sqlite3.connect(file)
         self.db.execute('CREATE TABLE IF NOT EXISTS subscriptions (id TEXT PRIMARY KEY, owner TEXT, channel TEXT, url TEXT, secret TEXT, expires REAL)')
+        columns = {row[1] for row in self.db.execute('PRAGMA table_info(subscriptions)')}
+        for name, kind in [('previous_secret','TEXT'),('rotation_until','REAL')]:
+            if name not in columns: self.db.execute('ALTER TABLE subscriptions ADD COLUMN '+name+' '+kind)
         self.db.commit()
         self.authorize, self.post, self.clock = authorize, post, clock
 
@@ -148,9 +155,11 @@ class SubscriptionStore:
         if not 200 <= status < 300 or not isinstance(echoed, str) or not hmac.compare_digest(echoed, challenge):
             raise ValueError('CallbackEndpointError: challenge_failed')
         expires = self.clock() + requested / 1000
+        old = self.db.execute('SELECT secret,previous_secret,rotation_until FROM subscriptions WHERE id=?',(identifier,)).fetchone()
+        previous, rotation_until = (old[0], self.clock()+300) if old and old[0] != secret else ((old[1],old[2]) if old else (None,None))
         with self.db:
-            self.db.execute('INSERT OR REPLACE INTO subscriptions VALUES (?,?,?,?,?,?)',
-                (identifier, owner, channel, url, secret, expires))
+            self.db.execute('INSERT OR REPLACE INTO subscriptions (id,owner,channel,url,secret,expires,previous_secret,rotation_until) VALUES (?,?,?,?,?,?,?,?)',
+                (identifier, owner, channel, url, secret, expires, previous, rotation_until))
         return {'id':identifier, 'refreshBefore':datetime.fromtimestamp(expires, timezone.utc).isoformat(), 'cursor':None, 'truncated':False}
 
     def unsubscribe(self, owner, params):
@@ -159,13 +168,13 @@ class SubscriptionStore:
         return {}
 
     def matching(self, channel):
-        rows = self.db.execute('SELECT id,owner,url,secret,expires FROM subscriptions WHERE channel=?', (channel,)).fetchall()
+        rows = self.db.execute('SELECT id,owner,url,secret,expires,previous_secret,rotation_until FROM subscriptions WHERE channel=?', (channel,)).fetchall()
         active = []
-        for identifier, owner, url, secret, expires in rows:
+        for identifier, owner, url, secret, expires, previous, rotation_until in rows:
             if expires <= self.clock() or not self.authorize(owner, channel):
                 with self.db: self.db.execute('DELETE FROM subscriptions WHERE id=?', (identifier,))
             else:
-                active.append({'id':identifier,'owner':owner,'url':url,'secret':secret})
+                active.append({'id':identifier,'owner':owner,'url':url,'secret':secret, 'previousSecret':previous if rotation_until and rotation_until > self.clock() else None})
         return active
 
     def close(self):

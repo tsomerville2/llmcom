@@ -8,6 +8,7 @@ class Outbox:
         self.store=store
         self.db=store.db
         self.db.execute('CREATE TABLE IF NOT EXISTS deliveries (subscription TEXT, event_id TEXT, channel TEXT, event TEXT, attempts INTEGER DEFAULT 0, due REAL, status TEXT, PRIMARY KEY(subscription,event_id))')
+        self.db.execute('CREATE TABLE IF NOT EXISTS message_origins (message_id TEXT PRIMARY KEY, owner TEXT)')
         self.db.commit()
 
     def enqueue(self, channel, message_id, sender, text, timestamp):
@@ -17,8 +18,13 @@ class Outbox:
                'data':{'channel':channel,'message_id':message_id,'sender':sender,'text':text},'cursor':None}
         body=json.dumps(event,ensure_ascii=False)
         if len(body.encode())>262144:raise ValueError('Event exceeds delivery limit.')
+        origin=self.db.execute('SELECT owner FROM message_origins WHERE message_id=?',(message_id,)).fetchone()
         with self.db:
             for sub in self.store.matching(channel):
+                if origin and sub['id']==origin[0]:continue
+                event['data']['subscription_id']=sub['id']
+                body=json.dumps(event,ensure_ascii=False)
+                if len(body.encode())>262144:raise ValueError('Event exceeds delivery limit.')
                 self.db.execute('INSERT OR IGNORE INTO deliveries(subscription,event_id,channel,event,due,status) VALUES(?,?,?,?,?,?)',
                     (sub['id'],event['eventId'],channel,body,self.store.clock(),'pending'))
 
