@@ -7,9 +7,11 @@ import subprocess
 import sys
 
 TOOLS = [
+    {'name':'llmcom_history','description':'Read recent channel message bodies, senders and message IDs on demand. Use this to read replies; inbox only returns counts. This is polling, not native delivery.',
+     'inputSchema':{'type':'object','properties':{'channel':{'type':'string'},'limit':{'type':'integer','minimum':1,'maximum':100},'before':{'type':'string','description':'Message ID cursor for older messages.'}},'required':['channel'],'additionalProperties':False},'annotations':{'readOnlyHint':True}},
     {'name':'llmcom_channels','description':'List channels on this configured LLMCom workspace.',
      'inputSchema':{'type':'object','properties':{},'additionalProperties':False},'annotations':{'readOnlyHint':True}},
-    {'name':'llmcom_inbox','description':'Read the configured desktop bridge identity inbox on demand. This is polling, not automatic chat delivery.',
+    {'name':'llmcom_inbox','description':'Read unread counts and DM summaries only. To read channel message bodies use llmcom_history. This is polling, not automatic delivery.',
      'inputSchema':{'type':'object','properties':{},'additionalProperties':False},'annotations':{'readOnlyHint':True}},
     {'name':'llmcom_say','description':'Send a user-authorized message to a LLMCom channel. Uses the configured machine bridge identity; do not claim it is this chat identity.',
      'inputSchema':{'type':'object','properties':{'channel':{'type':'string'},'text':{'type':'string'}},'required':['channel','text'],'additionalProperties':False},
@@ -45,6 +47,14 @@ def dispatch(request, call=runtime):
         if name in ['llmcom_channels','llmcom_inbox']:
             if args: raise ValueError('This tool takes no arguments.')
             value = call('channels' if name == 'llmcom_channels' else 'inbox')
+        elif name == 'llmcom_history':
+            if set(args) - {'channel','limit','before'} or not isinstance(args.get('channel'),str) or not re.fullmatch(r'[a-z0-9][a-z0-9_-]{0,63}',args['channel']):
+                raise ValueError('Provide a valid channel.')
+            limit = args.get('limit',20)
+            before = args.get('before','')
+            if type(limit) is not int or not 1 <= limit <= 100 or not isinstance(before,str) or (before and not re.fullmatch(r'[0-9]{1,30}',before)):
+                raise ValueError('Invalid limit or cursor.')
+            value = call('history',args['channel'],str(limit),before)
         elif name == 'llmcom_say':
             if set(args) != {'channel','text'} or not isinstance(args['channel'], str) or not re.fullmatch(r'[a-z0-9][a-z0-9_-]{0,63}',args['channel']):
                 raise ValueError('Provide a valid channel and text.')

@@ -74,6 +74,12 @@ else if (command === 'enroll-node') {
   output({ enrolled: true, name: config.role, fields: Object.keys(record).filter(k => !/token/i.test(k)) });
 }
 else if (command === 'join') output(await joinSession(args[0], args[1]));
+else if (command === 'history') {
+  const [channel, rawLimit = '20', before = ''] = args;
+  const limit = Number(rawLimit);
+  if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(channel || '') || !Number.isInteger(limit) || limit < 1 || limit > 100 || (before && !/^[0-9]{1,30}$/.test(before))) throw new Error('Invalid channel, limit or cursor.');
+  output(await client().messages(channel, { limit, ...(before ? { before } : {}) }));
+}
 else if (command === 'channels') output((await client().channels.list()).map(c => ({ name:c.name, topic:c.topic })));
 else if (command === 'channel-create' || command === 'channel-join') {
   const channel = args[0];

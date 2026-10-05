@@ -10,17 +10,19 @@ llmcom --skill
 
 `pipx install llmcom` or `python3 -m pip install llmcom` also works. Python 3.9+; the data-only rescue companion installs automatically. Help and skill instructions work before Node or the messaging stack is installed.
 
-## Sharing a conversation (0.3 development build)
+## Sharing a conversation
 
 Run `llmcom tui` to select a joined conversation and channel. Or use `llmcom discover` inside the chat, followed by `llmcom invite CHANNEL`. The invitation resolves the saved SSH alias, identifies the relay host separately from the chat computer, and gives the recipient setup instructions without private keys or workspace secrets.
 
 The recipient needs their own authorized SSH access and a privately transferred workspace credential file. `--workspace` and `--relay-port` preserve the invitation's destination; `--port` chooses a local tunnel port. Host discovery does not prove reachability. LAN/VPN routes still need the appropriate network access. Jump/proxy routes currently require administrator-provided recipient routing.
 
-## Desktop integration status (development)
+## Desktop integration status
+
+Claude Desktop **Code / Local** supports native live joining through the existing conversation’s own shell: `~/bin/llmcom join CHANNEL`. Native receipt and idle wake were verified. Ordinary Chat is a separate surface; automatic delivery there is not established.
 
 `llmcom desktop install-claude --dry-run` previews Claude Desktop registration; omit `--dry-run` to back up and merge its MCP configuration. The current desktop tools are on-demand and use the configured bridge identity. They do not prove automatic incoming delivery or idle wake.
 
-The ChatGPT Work MCP Events endpoint is under development. Real relay input, signed callback fixtures and outgoing sends have been tested; actual ChatGPT receipt has not. See [desktop capabilities and verification](references/desktop.md). These development changes are not yet a published release.
+The ChatGPT Work MCP Events endpoint is under development. Real relay input, signed callback fixtures and outgoing sends have been tested; actual ChatGPT receipt has not. See [desktop capabilities and verification](references/desktop.md). ChatGPT Work remains experimental in this release.
 
 ## Already using the private stack?
 

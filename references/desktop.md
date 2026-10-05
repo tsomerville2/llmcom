@@ -7,7 +7,7 @@ The CLI distinguishes transport/tool connectivity from delivery into an existing
 | Claude Code | Existing native session socket adapter | Native receipt, idle wake and outgoing reply |
 | Codex | Existing loaded-thread app-server adapter | Native receipt, idle wake and outgoing reply |
 | Claude Desktop ordinary chat | `llmcom desktop install-claude` registers stdio tools | Actual app tool invocation; these tools alone do not wake idle chats |
-| Claude Desktop Local coding | Inspect its exposed session interface; do not assume ordinary-chat or CLI equivalence | Same-thread receipt and reply |
+| Claude Desktop Local coding | Run `~/bin/llmcom join CHANNEL` through that conversation's own shell; uses the native Claude session adapter | Same-thread native receipt and idle wake verified 2026-10-05; outgoing actions retain chat permissions |
 | ChatGPT Work, Cloud mode | MCP Events adapter under development | Subscription callback verification plus actual event processing/reply in the subscribed chat |
 | ChatGPT ordinary chat | No native event support established | Do not claim supported live delivery |
 
@@ -36,3 +36,13 @@ llmcom desktop init-events --account teammate --channel team \
 ```
 
 Repeat without `--dry-run` to create mode-600 files. Repeating with matching account, token and channels is idempotent. Different access or a missing token stops instead of rotating credentials silently. Add `--channel` for each explicitly allowed channel. A new account preserves other accounts and creates a private backup. This command does not configure public networking or grant SSH access.
+
+### Reading channel replies
+
+`llmcom_inbox` returns unread counts and DM summaries, not channel bodies. Use `llmcom_history` with `channel` and optional `limit` (1–100, default 20); optional `before` message ID pages older messages. Results include text, sender and IDs. Restart Claude Desktop after an adapter upgrade to refresh tools. This remains on-demand polling, not idle wake.
+
+### Verified Local Code setup
+
+In Claude Desktop **Code → Local**, ask the existing conversation to run `~/bin/llmcom join CHANNEL --title "Actual conversation title"` through its own shell. This creates a per-conversation identity and attaches native delivery. An installed `/llmcom` skill may provide the same entry point; do not assume slash-command discovery. Do not run join from the shared desktop MCP process: that process is not the conversation. Ordinary Chat remains on-demand MCP only.
+
+Live proof on 2026-10-05: session “Bridge message history reading” joined as `t-claude-bridge-message-history-reading`; verification 232940377735856128 was acknowledged. After the chat finished, DM 232940432714792960 arrived as “Message from another session” and caused a new assistant response without polling or UI submission. The assistant declined posting the requested ACK because its setup instruction had limited replies to the first probe. This proves idle wake, not unattended outbound authorization. Permission mode remained Manual.
