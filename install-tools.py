@@ -51,7 +51,7 @@ for directory in [config, state, stack, home / 'bin', home / 'Library/LaunchAgen
     directory.mkdir(parents=True, exist_ok=True)
 for directory in [config, state]:
     directory.chmod(0o700)
-for name in ['package.json', 'package-lock.json', 'install-tools.py', 'runtime.mjs', 'cli.mjs', 'server.mjs', 'awstack.mjs', 'session.mjs', 'codex-session.mjs', 'channel.mjs', 'doctor.mjs', 'onboard.py', 'rescue.py', 'SKILL.md', 'awstack', 'llmcom', 'llmcom.py', 'discovery.py', 'connection.py', 'tui.py', 'desktop_mcp.py', 'desktop_setup.py', 'mcp_events.py', 'event_protocol.py', 'event_tools.py', 'event_setup.py', 'event_server.py', 'remote_chat.py', 'event_worker.py', 'event_delivery.py', 'event_relay.mjs', 'LLMCOM-SKILL.md', 'VERSION']:
+for name in ['package.json', 'package-lock.json', 'install-tools.py', 'runtime.mjs', 'cli.mjs', 'server.mjs', 'awstack.mjs', 'session.mjs', 'codex-session.mjs', 'channel.mjs', 'doctor.mjs', 'onboard.py', 'rescue.py', 'SKILL.md', 'awstack', 'llmcom', 'llmcom.py', 'discovery.py', 'connection.py', 'tui.py', 'desktop_mcp.py', 'desktop_setup.py', 'mcp_events.py', 'event_protocol.py', 'event_tools.py', 'event_setup.py', 'event_server.py', 'remote_chat.py', 'connector.py', 'connector_client.mjs', 'connector_worker.py', 'event_worker.py', 'event_delivery.py', 'event_relay.mjs', 'LLMCOM-SKILL.md', 'VERSION']:
     if not (source / name).exists():
         continue
     if source / name != stack / name:

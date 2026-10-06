@@ -56,6 +56,9 @@ def runtime(*args):
     return subprocess.run([str(NODE), str(STACK / 'awstack.mjs'), *args], check=True, env=environment)
 
 def main():
+    if len(sys.argv)>1 and sys.argv[1]=='connector':
+        from connector import main as connector_main
+        connector_main(sys.argv[2:]);return
     p = argparse.ArgumentParser(description='Live text channels in your existing Claude/Codex chat; no new conversation.')
     sub = p.add_subparsers(dest='command', required=True)
     s = sub.add_parser('setup', help='Create a channel; install this Mac too when installation arguments are supplied.')

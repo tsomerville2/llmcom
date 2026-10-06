@@ -18,6 +18,21 @@ llmcom setup my-room --local
 
 Then type `/llmcom join my-room` in each supported warmed conversation. The local relay and private workspace credentials are created on your Mac; no SSH setup is needed. Existing remote configurations are preserved.
 
+## Claude phone and voice connector
+
+```sh
+llmcom connector enable --channel bridge
+llmcom connector status
+```
+
+This sets up an outbound connection from your Mac to the shared HTTPS gateway and opens a private setup page. Add **LLMCom Remote** in Claude → Customize → Connectors → Add custom connector. Use the displayed URL, choose **No sign-in**, and add the **Authorization** request header copied from the private page. Enable the connector in your conversation. It uses Claude's supported custom connector interface; it is not an Anthropic-verified directory listing.
+
+A new Mac automatically installs the local stack and creates the requested first room. An existing workspace is preserved. Other users receive independent credentials and routing; they need no Fly account or SSH access to anyone else's computer. This installer currently supports macOS.
+
+Use `llmcom connector disable` to stop the background service and revoke access, or `llmcom connector rotate-key` to replace the Claude credential. Repeat `--channel` to allow additional existing rooms. `--gateway https://HOST` supports a separately hosted gateway. No credential goes in the URL.
+
+The Mac must be awake, with its existing relay reachable. Messages and reads are on demand, including when used from voice; the connector does not wake idle Claude conversations. The gateway handles tool contents in transit but does not log message bodies. Offline calls return an error and are not queued. See [connector operations and verification](references/connector.md).
+
 ## Sharing a conversation
 
 Run `llmcom tui` to select a joined conversation and channel. Or use `llmcom discover` inside the chat, followed by `llmcom invite CHANNEL`. The invitation resolves the saved SSH alias, identifies the relay host separately from the chat computer, and gives the recipient setup instructions without private keys or workspace secrets.
@@ -47,7 +62,7 @@ Upgrade refreshes wrappers, runtime source and both harnesses' skills. It preser
 
 ## First Mac setup
 
-An administrator must already have a private Relaycast server, SSH access and a private workspace credential file. This release installs a **macOS client**, not a new cloud account or public server.
+For joining an existing SSH-hosted workspace, an administrator provides the relay, your own SSH access, and a private workspace credential file. For a new independent workspace, use `llmcom setup ROOM --local` or `llmcom connector enable --channel ROOM`; neither requires SSH.
 
 ```sh
 llmcom setup team --computer alice --ssh-host YOUR_SERVER \
