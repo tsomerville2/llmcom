@@ -32,15 +32,15 @@ def setup_page(folder, config):
     url = config['gateway']+'/mcp/'+config['id']
     text = '''<!doctype html><meta charset="utf-8"><title>LLMCom Claude connector</title>
 <style>body{font:18px system-ui;max-width:760px;margin:50px auto;padding:20px;color:#173042}input{width:100%;padding:10px;margin:8px 0;font:14px monospace;box-sizing:border-box}button{padding:8px;margin:4px}li{margin:16px 0}</style>
-<h1>Connect LLMCom to Claude</h1><p>Your Mac must be awake and online. Allowed rooms: ROOM.</p>
-<ol><li>Open <a href="https://claude.ai/customize/connectors" target="_blank" rel="noreferrer">Claude Connectors</a> and add a custom connector named <b>LLMCom</b>.</li>
+<h1>Connect your phone to LLMCom</h1><p>Keep this page on your Mac. Complete the Claude setup in your desktop browser; then use the same Claude account on your phone.</p><p><a href="https://llmcom-connector.fly.dev/setup" target="_blank" rel="noreferrer">Public setup guide and troubleshooting</a></p><p>Your Mac must be awake and online. Allowed rooms: ROOM.</p>
+<ol><li>Open <a href="https://claude.ai/customize/connectors" target="_blank" rel="noreferrer">Claude Connectors</a> and add a custom connector named <b>LLMCom Remote</b>.</li>
 <li>Server URL:<input id="url" readonly value="__CONNECTOR_URL__"><button onclick="copy('url')">Copy URL</button></li>
-<li>Choose fixed request-header authentication (no OAuth sign-in). Add header <b>Authorization</b> with this value:<input id="key" type="password" readonly value="__CONNECTOR_KEY__"><button onclick="copy('key')">Copy Authorization value</button><button onclick="document.getElementById('key').type='text'">Reveal locally</button></li>
-<li>Add the connector, then enable LLMCom in your conversation’s Connectors menu.</li></ol>
-<p>Try: “Use LLMCom to join #ROOM as phone-test, say hello, then read the replies.”</p>
+<li>Under authentication select <b>No sign-in</b>. The warning is expected: we use an API key. Under <b>Request headers</b>, set Header name to <b>Authorization</b>, paste the value below into Value, and leave Required checked:<input id="key" type="password" readonly value="__CONNECTOR_KEY__"><button onclick="copy('key')">Copy Authorization value</button><button onclick="document.getElementById('key').type='text'">Reveal locally</button></li>
+<li>Save the connector. On your phone, start a <b>new chat</b> with the same Claude account and enable <b>LLMCom Remote</b> in its Connectors menu. Approve its tools when Claude asks.</li></ol>
+<h2>Connect both ends</h2><p>In your existing local Claude Code or Codex conversation, ask it to run <code>llmcom join FIRST_ROOM</code>.</p><p>Then tell phone Claude: <b>“Use LLMCom Remote to join FIRST_ROOM as my-phone, say hello, then listen for replies.”</b></p><p>Listening holds an active tool call for up to 18 seconds. It cannot wake an idle chat. Ask to listen again when you want another window. Your Mac must stay awake.</p><p>If the wait tool is missing: on Claude desktop, open this connector’s More options → Refresh tools list, then start a new phone chat.</p>
 <p>This private file contains your connector credential. Do not share it. This is an LLMCom custom connector, not an Anthropic-verified directory listing.</p>
 <script>async function copy(id){const el=document.getElementById(id);try{await navigator.clipboard.writeText(el.value)}catch{const before=el.type;el.type='text';el.select();document.execCommand('copy');el.type=before}}</script>'''
-    text=text.replace('ROOM',html.escape(', '.join(config['channels']))).replace('__CONNECTOR_URL__',html.escape(url,quote=True)).replace('__CONNECTOR_KEY__',html.escape('Bearer '+config['claudeKey'],quote=True))
+    text=text.replace('FIRST_ROOM',html.escape(config.get('setupChannel',config['channels'][0]))).replace('ROOM',html.escape(', '.join(config['channels']))).replace('__CONNECTOR_URL__',html.escape(url,quote=True)).replace('__CONNECTOR_KEY__',html.escape('Bearer '+config['claudeKey'],quote=True))
     file=folder/'claude-setup.html'
     fd=os.open(file,os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
     with os.fdopen(fd,'w') as handle:handle.write(text)
@@ -79,6 +79,7 @@ def main(argv=None):
     p.add_argument('action',choices=['enable','status','disable','rotate-key'])
     p.add_argument('--channel',action='append',default=[])
     p.add_argument('--gateway')
+    p.add_argument('--add-channels',action='store_true',help='Preserve existing rooms while adding requested rooms.')
     p.add_argument('--no-open',action='store_true')
     a=p.parse_args(argv)
     folder=Path.home()/'.config/agentworkforce/connector';file=folder/'config.json'
@@ -102,6 +103,7 @@ def main(argv=None):
     else:
         channels=sorted(set(c.lstrip('#').lower() for c in (a.channel or (config or {}).get('channels',[]))))
         if not channels or any(not re.fullmatch(r'[a-z0-9][a-z0-9_-]{0,63}',c) for c in channels):raise ValueError('Specify at least one valid --channel.')
+        if a.add_channels:channels=sorted(set(channels+(config or {}).get('channels',[])))
         requested_gateway=a.gateway or (config or {}).get('gateway',GATEWAY)
         url=urllib.parse.urlparse(requested_gateway)
         if url.scheme!='https' or not url.hostname or url.username or url.password or url.query or url.fragment or url.path not in ('','/'):
@@ -120,21 +122,32 @@ def main(argv=None):
         import shutil
         for name in ['connector.py','connector_client.mjs','connector_worker.py','remote_chat.py']:
             if (source/name).resolve()!=(stack/name).resolve():shutil.copy2(source/name,stack/name)
+        # Add the new CLI entry point without replacing local runtime extensions.
+        cli=stack/'llmcom.py'
+        if cli.exists() and "sys.argv[1]=='phone'" not in cli.read_text():
+            current=cli.read_text()
+            addition=(source/'llmcom.py').read_text().split('def main():\n',1)[1].split("    if len(sys.argv)>1 and sys.argv[1]=='connector':",1)[0]
+            if 'def main():\n' not in current:raise ValueError('Cannot update local CLI; run llmcom upgrade, then retry.')
+            backup=cli.with_name('llmcom.py.before-phone')
+            if not backup.exists():shutil.copy2(cli,backup)
+            cli.write_text(current.replace('def main():\n','def main():\n'+addition,1))
         from desktop_mcp import runtime
         available=runtime('channels')
         available=available if isinstance(available,list) else available.get('channels',[])
         names={c if isinstance(c,str) else c.get('name') for c in available}
-        if not set(channels)<=names:raise ValueError('Requested room does not exist. Run llmcom setup ROOM first.')
+        for channel in sorted(set(channels)-names):runtime('channel-create',channel)
         folder.mkdir(parents=True,exist_ok=True,mode=0o700);folder.chmod(0o700)
         if not config:config={**api(gateway,'/installations',method='POST',data={'version':1}),'gateway':gateway}
-        config['channels']=channels;onboard.private_json(file,config)
+        config['channels']=channels
+        config['setupChannel']=(a.channel[-1].lstrip('#').lower() if a.channel else channels[0])
+        onboard.private_json(file,config)
         launch(folder,file)
         for _ in range(20):
             if api(gateway,'/installations/'+config['id'],token=config['deviceKey'])['connected']:break
             time.sleep(.5)
         else:raise ValueError('Registered but local service did not connect. Run llmcom connector status; credentials are saved for retry.')
     page=setup_page(folder,config)
-    print(json.dumps({'connected':api(config['gateway'],'/installations/'+config['id'],token=config['deviceKey'])['connected'],'channels':config['channels'],'url':config['gateway']+'/mcp/'+config['id'],'setupFile':str(page),'next':'Add this custom connector in Claude using the private setup page.'},indent=2))
+    print(json.dumps({'connected':api(config['gateway'],'/installations/'+config['id'],token=config['deviceKey'])['connected'],'channels':config['channels'],'url':config['gateway']+'/mcp/'+config['id'],'setupFile':str(page),'guide':GATEWAY+'/setup','next':'Follow the opened personal setup page, then start a new Claude phone chat.'},indent=2))
     if not a.no_open:subprocess.run(['open',str(page)],check=True)
 
 if __name__=='__main__':

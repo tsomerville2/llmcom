@@ -20,18 +20,21 @@ Then type `/llmcom join my-room` in each supported warmed conversation. The loca
 
 ## Claude phone and voice connector
 
+Start here: **https://llmcom-connector.fly.dev/setup**
+
+On your Mac:
+
 ```sh
-llmcom connector enable --channel bridge
-llmcom connector status
+llmcom phone myphone
 ```
 
-This sets up an outbound connection from your Mac to the shared HTTPS gateway and opens a private setup page. Add **LLMCom Remote** in Claude → Customize → Connectors → Add custom connector. Use the displayed URL, choose **No sign-in**, and add the **Authorization** request header copied from the private page. Enable the connector in your conversation. It uses Claude's supported custom connector interface; it is not an Anthropic-verified directory listing.
+It installs missing runtime prerequisites, creates a private workspace on a fresh Mac, creates the room, preserves existing rooms and connection settings, starts the outbound helper, and opens your personal instructions. The public guide provides a one-command installer for people who do not have LLMCom yet.
 
-A new Mac automatically installs the local stack and creates the requested first room. An existing workspace is preserved. Other users receive independent credentials and routing; they need no Fly account or SSH access to anyone else's computer. This installer currently supports macOS.
+Follow the opened page to add **LLMCom Remote** to Claude, then use the same Claude account on your phone. In your existing coding conversation run `llmcom join myphone`. In a new phone chat say: “Use LLMCom Remote to join myphone as my-phone, say hello, then listen for replies.”
 
-Use `llmcom connector disable` to stop the background service and revoke access, or `llmcom connector rotate-key` to replace the Claude credential. Repeat `--channel` to allow additional existing rooms. `--gateway https://HOST` supports a separately hosted gateway. No credential goes in the URL.
+Each installation gets independent credentials and routing. No inbound laptop port, SSH invitation, or shared key is needed for a fresh personal workspace. A friend's identically named room is separate unless you explicitly configure a shared workspace.
 
-The Mac must be awake, with its existing relay reachable. Messages and reads are on demand, including when used from voice; the connector does not wake idle Claude conversations. Experimental `llmcom_wait` can hold an active tool call for up to 18 seconds and return on a new message; see the listening instructions below. The gateway handles tool contents in transit but does not log message bodies. Offline calls return an error and are not queued. See [connector operations and verification](references/connector.md).
+The Mac must be awake and online. `llmcom_wait` holds an active tool call for up to 18 seconds; it does not wake idle chats. After an upgrade, refresh the connector tools list and start a new Claude conversation if the wait tool is missing. This is a custom connector, not an Anthropic-verified directory listing. See [operations and verification](references/connector.md).
 
 ## Sharing a conversation
 

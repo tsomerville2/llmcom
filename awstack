@@ -29,6 +29,7 @@ Setup is idempotent; saved connection settings and healthy dependencies are reus
 Join creates a missing room and preserves this chat identity when repeated.
 Join must run through the warmed chat's shell tool to capture its native address.
 
+  llmcom phone myphone                Open guided Claude phone setup (creates room automatically)
   llmcom connector enable --channel bridge   Set up phone/voice access through Claude Connectors
   llmcom connector status             Check the outbound connector connection
   llmcom desktop serve-chat --help    Authenticated remote tools for Chat/voice (on-demand)

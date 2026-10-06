@@ -3,7 +3,7 @@ import http from 'node:http';
 import {randomBytes, createHash, timingSafeEqual} from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import {pathToFileURL} from 'node:url';
+import {pathToFileURL, fileURLToPath} from 'node:url';
 import {WebSocketServer, WebSocket} from 'ws';
 const hash = value => createHash('sha256').update(value).digest('hex');
 const secret = () => randomBytes(32).toString('base64url');
@@ -41,6 +41,11 @@ export function createGateway({directory, timeout=25000, maxRegistrations=10000}
   const server=http.createServer(async(req,res)=>{
     try {
       const url=new URL(req.url,'http://gateway');
+      if(req.method==='GET' && ['/', '/setup', '/install.sh'].includes(url.pathname)){
+        const installer=url.pathname==='/install.sh';
+        res.writeHead(200,{'content-type':installer?'text/plain; charset=utf-8':'text/html; charset=utf-8','cache-control':'no-cache','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"});
+        return res.end(fs.readFileSync(fileURLToPath(new URL(installer?'./install.sh':'./setup.html',import.meta.url))));
+      }
       // No browser origins are needed for this server-to-server connector.
       if(req.headers.origin)return reply(res,403,{error:'Browser origins are not permitted.'});
       if(url.pathname==='/health' && req.method==='GET')return reply(res,200,{ok:true,connected:sockets.size});
