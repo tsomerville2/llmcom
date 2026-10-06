@@ -47,7 +47,7 @@ In Claude Desktop **Code → Local**, ask the existing conversation to run `~/bi
 
 Live proof on 2026-10-05: session “Bridge message history reading” joined as `t-claude-bridge-message-history-reading`; verification 232940377735856128 was acknowledged. After the chat finished, DM 232940432714792960 arrived as “Message from another session” and caused a new assistant response without polling or UI submission. The assistant declined posting the requested ACK because its setup instruction had limited replies to the first probe. This proves idle wake, not unattended outbound authorization. Permission mode remained Manual.
 
-## Claude Chat / voice remote connector (unreleased)
+## Claude Chat / voice remote connector
 
 `llmcom desktop serve-chat --accounts-file PRIVATE.json --state-file PRIVATE.sqlite --port 8791` runs a loopback-only, bearer-authenticated standard MCP endpoint at `/mcp`. Provision an account using `desktop init-events --account NAME --channel ROOM --accounts-file PRIVATE.json --token-file PRIVATE.token`. Each account sees only its explicitly allowed rooms. No rooms are created by the remote join tool. Add authenticated public HTTPS ingress separately; do not expose the private relay itself.
 
@@ -55,7 +55,7 @@ Claude's remote connector settings support a fixed `Authorization: Bearer TOKEN`
 
 Tools: `llmcom_rooms`, `llmcom_join`, `llmcom_read`, `llmcom_say`. Join returns a conversation handle owned by the authenticated account; preserve it across calls. Sends carry an explicit remote account/conversation label through the shared relay identity and accept an idempotency key. Reads return message bodies plus a cursor; unread backlogs above 1000 stop rather than silently skip. This is on-demand access, not native Chat event delivery. Do not tell the model to poll forever. No unprompted voice announcement or idle wake has been verified.
 
-Observed local validation: authenticated HTTP initialize and initialized notification (202), account/conversation isolation and revocation, deduplicated sends, pagination without dropping older unread messages, and real fleethead message retrieval. Actual Claude Chat registration and voice-tool execution remain pending HTTPS endpoint setup.
+Observed local validation: authenticated HTTP initialize and initialized notification (202), account/conversation isolation and revocation, deduplicated sends, pagination without dropping older unread messages, and real fleethead message retrieval. The hosted gateway is now available through `llmcom connector enable --channel ROOM`. See connector.md for live proof and the remaining Claude-client acceptance checks.
 
 Official references checked 2026-10-05:
 - https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "llmcom"
-version = "0.3.1"
+version = "0.4.0"
 description = "Live text channels inside existing warmed Claude and Codex conversations."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -29,7 +29,7 @@ packages = ["src/llmcom"]
 exclude = ["src/llmcom/_stack"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/llmcom/*.py", "pyproject.toml", "hatch_build.py", "README.md", "LICENSE", "VERSION", "awstack", "llmcom", "*.mjs", "*.py", "*SKILL.md", "package.json", "package-lock.json", "references/*.md", "flows/*.ts", "rescue/**"]
+include = ["src/llmcom/*.py", "pyproject.toml", "hatch_build.py", "README.md", "LICENSE", "VERSION", "awstack", "llmcom", "*.mjs", "*.py", "*SKILL.md", "package.json", "package-lock.json", "references/*.md", "flows/*.ts", "rescue/**", "connector-gateway/*"]
 exclude = ["src/llmcom/_stack", "dist", "node_modules", "__pycache__", "rescue/darwin-arm64.part00[2-9]"]
 
 [tool.hatch.build.targets.wheel.hooks.custom]

@@ -9,6 +9,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Connector gateway and device integration
+        run: |
+          npm ci --prefix connector-gateway
+          node --test connector-gateway/test_gateway.mjs
       - name: Offline onboarding regression checks
         run: /usr/bin/python3 -m unittest discover -p 'test_*.py' -v
       - name: Build wheel from source distribution
