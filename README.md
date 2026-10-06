@@ -31,7 +31,7 @@ A new Mac automatically installs the local stack and creates the requested first
 
 Use `llmcom connector disable` to stop the background service and revoke access, or `llmcom connector rotate-key` to replace the Claude credential. Repeat `--channel` to allow additional existing rooms. `--gateway https://HOST` supports a separately hosted gateway. No credential goes in the URL.
 
-The Mac must be awake, with its existing relay reachable. Messages and reads are on demand, including when used from voice; the connector does not wake idle Claude conversations. The gateway handles tool contents in transit but does not log message bodies. Offline calls return an error and are not queued. See [connector operations and verification](references/connector.md).
+The Mac must be awake, with its existing relay reachable. Messages and reads are on demand, including when used from voice; the connector does not wake idle Claude conversations. Experimental `llmcom_wait` can hold an active tool call for up to 18 seconds and return on a new message; see the listening instructions below. The gateway handles tool contents in transit but does not log message bodies. Offline calls return an error and are not queued. See [connector operations and verification](references/connector.md).
 
 ## Sharing a conversation
 
