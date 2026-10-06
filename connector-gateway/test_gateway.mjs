@@ -87,3 +87,13 @@ test('real device process and Python tools isolate two homes and deduplicate sen
  assert.equal(JSON.parse(fs.readFileSync(path.join(la.stack,'messages.json'))).length,1);
  const read=await tool(a,'llmcom_read',{channel:'room',conversation_id:cid});assert.equal(JSON.parse(read.result.content[0].text).messages.length,1);
 });
+
+test('public setup guide is available without opening browser access to private routes',async t=>{
+ const f=await fixture(t);
+ for(const route of ['/', '/setup']){
+  const r=await fetch(f.base+route);assert.equal(r.status,200);assert.match(r.headers.get('content-type'),/text\/html/);
+  const text=await r.text();assert.match(text,/llmcom phone myphone/);assert.match(text,/18 seconds/);assert.doesNotMatch(text,/rk_live_/);
+ }
+ const install=await fetch(f.base+'/install.sh');assert.equal(install.status,200);assert.match(await install.text(),/llmcom>=0.4.1/);
+ const blocked=await f.call('/installations',null,{version:1},'POST',{Origin:'https://evil.example'});assert.equal(blocked.status,403);
+});

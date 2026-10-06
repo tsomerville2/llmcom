@@ -49,3 +49,7 @@ Use `channels` for rooms and `sessions` for joined conversations. `list` is not 
 ## Claude mobile and voice
 
 `llmcom connector enable --channel ROOM` installs an outbound-only background connection to the shared Fly gateway and opens private Claude setup instructions. Each installation gets independent device and Claude credentials. Use the custom connector in ordinary Claude conversations; supported tools are rooms, join, read, and say. Existing relay configuration stays local. `connector status`, `disable`, and `rotate-key` manage the connection. Never paste the credential into chat or a channel. Phone and voice require actual Claude connector registration; a gateway connection alone is not receipt proof. Read references/connector.md.
+
+## Guided phone setup
+
+For Claude phone access run `llmcom phone ROOM` (default `myphone`). It adds the room without dropping existing authorized rooms, installs missing prerequisites, and opens private personalized instructions. Share https://llmcom-connector.fly.dev/setup with another person, never your private setup HTML or credential. Each fresh Mac gets its own workspace and authenticated route. Have the user's local coding conversation run `llmcom join ROOM`; then a new phone Claude conversation can join/read/say/wait using LLMCom Remote. Wait lasts at most 18 seconds during an active call; it is not idle wake. After upgrades, Refresh tools list in Claude's connector settings and use a new conversation if necessary.

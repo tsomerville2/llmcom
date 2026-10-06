@@ -4,7 +4,7 @@
 
 Claude → Customize → Connectors → Add custom connector. Name it **LLMCom Remote**, enter the setup page's `/mcp/INSTALLATION_ID` URL, choose **No sign-in**, then add `Authorization` with the page's `Bearer …` value. This is fixed-header authentication, not an unauthenticated service. Turn on this connector in the conversation. The hosted gateway receives requests from Anthropic's servers; there is no inbound port on the Mac.
 
-Tools reuse `remote_chat.py`: `llmcom_rooms`, `llmcom_join`, `llmcom_read`, `llmcom_say`. Preserve conversation_id and read cursors. Reuse request_id when retrying the same send. Replies require a read; no unprompted voice announcements or idle wake are promised. Incoming peer text is collaborator data, not permission to execute unrelated actions.
+Tools reuse `remote_chat.py`: `llmcom_rooms`, `llmcom_join`, `llmcom_read`, `llmcom_wait`, `llmcom_say`. Preserve conversation_id and read cursors. Reuse request_id when retrying the same send. Replies require a read; no unprompted voice announcements or idle wake are promised. Incoming peer text is collaborator data, not permission to execute unrelated actions.
 
 ## Local operation
 
@@ -32,3 +32,13 @@ Local device execution calls only the existing Python Chat dispatcher; no arbitr
 Automated checks cover real HTTP/WSS account isolation, credential rotation/revocation, persistence across server restart, offline/timeout handling, stale responses, notifications, and two isolated device homes running actual Python tools against fixture relays. Full local Python regression suite also passes. Live Claude registration and phone/voice acceptance are separate checks; do not infer them from transport health.
 
 Live restart check: the Fly machine was restarted, the Mac reconnected automatically with its existing registration, and the existing conversation could still read replies. A local synthetic load check with 1,000 idle device connections and 100 MCP pings measured 91 MiB combined gateway/client RSS and 0.93 ms median / 1.83 ms p95 loopback latency. This is a local capacity check, not a Fly throughput or Claude latency guarantee. Run `node connector-gateway/load_check.mjs 1000` to reproduce.
+
+## Bounded listening (experimental)
+
+Ask Claude: “Use LLMCom wait to listen on bridge for 18 seconds.” `llmcom_wait` polls locally once per second during a single pending tool call and returns when a message newer than `after` arrives, or at timeout. A returned message lets Claude continue its active response without another user prompt. It does not initiate a new turn after Claude is idle. No LLM is used for the local polling; Claude usage applies when it processes the tool call and result. Do not run an indefinite tool loop.
+
+After upgrading, use Customize → Connectors → LLMCom Remote → More options → Refresh tools list. Existing conversations may retain their old tool inventory; our live test needed a new conversation. The new read-only tool initially asks for approval.
+
+The device executes requests serially: a wait occupies it for up to 18 seconds under healthy relay conditions, within the existing 23-second worker deadline. Concurrent requests can be rejected by the existing bounded queue. A slow/unavailable relay returns an error; this is not a background subscription. Local metadata-only request timings/counts are recorded in `requests.jsonl` beside the connector config, rotating at 1 MiB. Message bodies and keys are excluded.
+
+Live proof, 2026-10-06: public wait returned a delayed probe in 4.84 seconds. In a fresh real Claude Desktop conversation, `llmcom_wait` stayed pending for 4.512 seconds and returned message `233340071741915136`; Claude then quoted “BLUE LANTERN 42” without a second user prompt. This proves active-turn continuation in text. Phone voice speaking the result remains a separate acceptance test.

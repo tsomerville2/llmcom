@@ -40,3 +40,29 @@ class RemoteTests(unittest.TestCase):
             self.assertIsNone(chat.reply({'jsonrpc':'2.0','method':'notifications/initialized'},'alice'))
             self.assertIn('error',chat.reply([], 'alice'))
             store.close()
+    def test_wait_arrival_timeout_and_revocation(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as d:
+            allowed=True
+            store=SubscriptionStore(Path(d)/'state.db',lambda o,c:allowed)
+            calls=[]
+            def runtime(*args):
+                calls.append(args)
+                return [] if len(calls)==1 else [{'id':'11','text':'wake'}]
+            chat=Chat(store,lambda:{'alice':{'channels':['room']}},runtime)
+            def tool(name,args):return chat.dispatch({'jsonrpc':'2.0','method':'tools/call','params':{'name':name,'arguments':args}},'alice')
+            cid=json.loads(tool('llmcom_join',{'name':'voice','channel':'room'})['content'][0]['text'])['conversation_id']
+            args={'conversation_id':cid,'channel':'room','after':'10','timeout_seconds':1}
+            with patch('remote_chat.time.sleep'):
+                value=json.loads(tool('llmcom_wait',args)['content'][0]['text'])
+            self.assertEqual(value['wait_status'],'messages');self.assertFalse(value['listening']);self.assertEqual(value['messages'][0]['id'],'11')
+            chat.call=lambda *args:[]
+            with patch('remote_chat.time.monotonic',side_effect=[0,2]):
+                value=json.loads(tool('llmcom_wait',args)['content'][0]['text'])
+            self.assertEqual(value['wait_status'],'timeout');self.assertEqual(value['next_after'],'10')
+            def revoke(*unused):
+                nonlocal allowed
+                allowed=False
+            with patch('remote_chat.time.sleep',side_effect=revoke):
+                with self.assertRaises(PermissionError):tool('llmcom_wait',args)
+            store.close()

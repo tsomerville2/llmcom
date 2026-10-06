@@ -38,3 +38,26 @@ class ConnectorTests(unittest.TestCase):
             with self.assertRaises(ValueError):connector.main(['disable'])
             self.assertTrue(any('bootout' in c.args[0] for c in run.call_args_list))
             self.assertTrue(file.exists())
+
+    def test_phone_setup_adds_room_preserves_existing_and_reuses_registration(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as d:
+            home=Path(d); folder=home/'.config/agentworkforce/connector';folder.mkdir(parents=True)
+            stack=home/'stack';(stack/'node_modules/ws').mkdir(parents=True);(stack/'node_modules/ws/package.json').write_text('{}')
+            (folder.parent/'stack.json').write_text('{}')
+            (stack/'llmcom.py').write_text('import sys, argparse\ndef main():\n    pass # preserve-custom-extension\n')
+            config={'id':'a'*32,'gateway':'https://example.com','deviceKey':'d'*43,'claudeKey':'c'*43,'channels':['bridge']}
+            (folder/'config.json').write_text(json.dumps(config))
+            with patch('pathlib.Path.home',return_value=home),patch('onboard.STACK',stack),patch('onboard.install_node'),patch('shutil.copy2'),patch('connector.launch'),patch('connector.api',return_value={'connected':True}) as api,patch('desktop_mcp.runtime',return_value=[{'name':'bridge'}]) as runtime,patch('builtins.print'):
+                connector.main(['enable','--channel','myphone','--add-channels','--no-open'])
+            saved=json.loads((folder/'config.json').read_text())
+            self.assertIn("sys.argv[1]=='phone'",(stack/'llmcom.py').read_text())
+            self.assertIn('preserve-custom-extension',(stack/'llmcom.py').read_text())
+            self.assertEqual(saved['channels'],['bridge','myphone'])
+            self.assertEqual(saved['id'],config['id'])
+            self.assertEqual(saved['setupChannel'],'myphone')
+            runtime.assert_any_call('channel-create','myphone')
+            self.assertFalse(any(c.kwargs.get('method')=='POST' for c in api.call_args_list))
+            page=(folder/'claude-setup.html').read_text()
+            self.assertIn('join myphone as my-phone',page)
+            self.assertIn('https://llmcom-connector.fly.dev/setup',page)
