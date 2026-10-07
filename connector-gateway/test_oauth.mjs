@@ -28,7 +28,7 @@ async function fixture(t){
   assert.equal(r.headers.get('referrer-policy'),'same-origin');
   const submit=(headers={cookie,origin},code=pair.pairingCode)=>call('/oauth/authorize',{csrf,pairing_code:code},headers);
   const submitForm=()=>fetch(base+'/oauth/authorize',{method:'POST',redirect:'manual',headers:{cookie,origin,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf,pairing_code:pair.pairingCode})});
-  return {r,pair,verifier,submit,submitForm};
+  return {r,pair,verifier,submit,submitForm,cookie};
  }
  async function grant(a,c){const flow=await authorize(a,c);const r=await flow.submit();assert.equal(r.status,303);const target=new URL(r.headers.get('location'));assert.equal(target.origin,'https://chatgpt.com');assert.equal(target.searchParams.get('state'),'state-test');assert.equal(target.searchParams.get('iss'),origin);return {flow,body:{grant_type:'authorization_code',client_id:c,redirect_uri:redirect,resource,code:target.searchParams.get('code'),code_verifier:flow.verifier}};}
  return {call,bearer,account,client,authorize,grant,directory,restart:async()=>{await gateway.close();await start();},device:async a=>{const ws=new WebSocket(base.replace('http:','ws:')+'/connect/'+a.id,{headers:bearer(a.deviceKey)});await once(ws,'open');return ws;}};
@@ -86,4 +86,24 @@ test('token revocation removes its grant family; expired tokens cannot reconnect
  fs.writeFileSync(file,JSON.stringify(stored));await f.restart();
  assert.equal((await f.call('/mcp',{},f.bearer(expired.access_token))).status,401);
  assert.equal((await f.call('/oauth/token',{...refresh,refresh_token:expired.refresh_token})).status,400);
+});
+
+test('pending pairing survives restart, new codes and parallel browser tabs',async t=>{
+ const f=await fixture(t),a=await f.account(),c=await f.client();
+ const first=await f.authorize(a,c),second=await f.authorize(a,c);
+ await f.restart();
+ // Both codes and both CSRF/cookie bindings remain valid after redeployment.
+ assert.equal((await first.submit({cookie:first.cookie+'; '+second.cookie,origin})).status,303);
+ assert.equal((await second.submitForm()).status,303);
+ assert.equal((await first.submitForm()).status,400);
+});
+
+test('pairing lifetime stays ten minutes and pending secrets are stored hashed',async t=>{
+ const f=await fixture(t),a=await f.account(),c=await f.client(),flow=await f.authorize(a,c);
+ const stored=fs.readFileSync(path.join(f.directory,'oauth.json'),'utf8');
+ assert.ok(!stored.includes(flow.pair.pairingCode));
+ assert.ok(!stored.includes(flow.cookie.split('=')[1]));
+ const original=Date.now;
+ try{Date.now=()=>original()+600001;assert.equal((await flow.submitForm()).status,400);}
+ finally{Date.now=original;}
 });
