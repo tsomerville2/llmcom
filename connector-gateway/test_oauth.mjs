@@ -25,8 +25,10 @@ async function fixture(t){
   const r=await call('/oauth/authorize?'+new URLSearchParams(query),undefined,{},'GET');
   if(r.status!==200)return {r};
   const html=await r.text(),csrf=html.match(/name="csrf" value="([^"]+)"/)[1],cookie=r.headers.get('set-cookie').split(';')[0];
-  const submit=(headers={cookie},code=pair.pairingCode)=>call('/oauth/authorize',{csrf,pairing_code:code},headers);
-  return {r,pair,verifier,submit};
+  assert.equal(r.headers.get('referrer-policy'),'same-origin');
+  const submit=(headers={cookie,origin},code=pair.pairingCode)=>call('/oauth/authorize',{csrf,pairing_code:code},headers);
+  const submitForm=()=>fetch(base+'/oauth/authorize',{method:'POST',redirect:'manual',headers:{cookie,origin,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf,pairing_code:pair.pairingCode})});
+  return {r,pair,verifier,submit,submitForm};
  }
  async function grant(a,c){const flow=await authorize(a,c);const r=await flow.submit();assert.equal(r.status,303);const target=new URL(r.headers.get('location'));assert.equal(target.origin,'https://chatgpt.com');assert.equal(target.searchParams.get('state'),'state-test');assert.equal(target.searchParams.get('iss'),origin);return {flow,body:{grant_type:'authorization_code',client_id:c,redirect_uri:redirect,resource,code:target.searchParams.get('code'),code_verifier:flow.verifier}};}
  return {call,bearer,account,client,authorize,grant,directory,restart:async()=>{await gateway.close();await start();},device:async a=>{const ws=new WebSocket(base.replace('http:','ws:')+'/connect/'+a.id,{headers:bearer(a.deviceKey)});await once(ws,'open');return ws;}};
@@ -39,7 +41,8 @@ test('OAuth discovery, registered redirects, resource binding, CSRF, PKCE and re
  for(const override of [{resource:'https://evil.example/mcp'},{redirect_uri:'https://evil.example'},{code_challenge_method:'plain'},{scope:'admin'}])assert.equal((await f.authorize(a,c,override)).r.status,400);
  const flow=await f.authorize(a,c);assert.equal((await flow.submit({})).status,400);assert.equal((await flow.submit({cookie:'llmcom_oauth='+'x'.repeat(43)})).status,400);
  assert.equal((await flow.submit({cookie:'x',origin:'https://evil.example'})).status,403);
- const first=await flow.submit();assert.equal(first.status,303);assert.equal((await flow.submit()).status,400);
+ assert.equal((await flow.submit({cookie:'x',origin:'null'})).status,403);
+ const first=await flow.submitForm();assert.equal(first.status,303);assert.equal((await flow.submit()).status,400);
  const code=new URL(first.headers.get('location')).searchParams.get('code');
  const body={grant_type:'authorization_code',client_id:c,redirect_uri:redirect,resource,code,code_verifier:flow.verifier};
  for(const change of [{code_verifier:'z'.repeat(43)},{resource:'https://evil.example'},{client_id:'wrong'},{redirect_uri:redirect+'/wrong'}])assert.equal((await f.call('/oauth/token',{...body,...change})).status,400);

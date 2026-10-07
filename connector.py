@@ -178,6 +178,10 @@ def main(argv=None):
     if a.client=='openai':
         pairing=api(config['gateway'],'/installations/'+config['id']+'/pair',method='POST',token=config['deviceKey'],data={})
         page=openai_setup_page(folder,pairing,config)
+        print('ONE-TIME PAIRING CODE (private; expires in 10 minutes): '+pairing['pairingCode'])
+        print('CONNECTION GUIDE: '+GATEWAY+'/setup#openai-connect')
+        print('Paste the code on the Connect LLMCom to OpenAI page opened by ChatGPT. If it is not open, follow the guide above; the guide itself has no paste box.')
+
     print(json.dumps({'connected':api(config['gateway'],'/installations/'+config['id'],token=config['deviceKey'])['connected'],'channels':config['channels'],'url':config['gateway']+'/mcp'+('' if a.client=='openai' else '/'+config['id']),'setupFile':str(page),'guide':GATEWAY+'/setup','next':'Follow the opened personal setup page, then start a new '+('ChatGPT/Codex' if a.client=='openai' else 'Claude')+' phone chat.'},indent=2))
     if not a.no_open:subprocess.run(['open',str(page)],check=True)
 
