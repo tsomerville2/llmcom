@@ -94,6 +94,6 @@ test('public setup guide is available without opening browser access to private 
   const r=await fetch(f.base+route);assert.equal(r.status,200);assert.match(r.headers.get('content-type'),/text\/html/);
   const text=await r.text();assert.match(text,/llmcom phone myphone/);assert.match(text,/18 seconds/);assert.doesNotMatch(text,/rk_live_/);
  }
- const install=await fetch(f.base+'/install.sh');assert.equal(install.status,200);assert.match(await install.text(),/llmcom>=0.4.2/);
+ const install=await fetch(f.base+'/install.sh');assert.equal(install.status,200);assert.match(await install.text(),/llmcom>=0.4.3/);
  const blocked=await f.call('/installations',null,{version:1},'POST',{Origin:'https://evil.example'});assert.equal(blocked.status,403);
 });
