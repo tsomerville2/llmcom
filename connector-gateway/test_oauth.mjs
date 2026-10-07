@@ -42,7 +42,7 @@ test('OAuth discovery, registered redirects, resource binding, CSRF, PKCE and re
  const flow=await f.authorize(a,c);assert.equal((await flow.submit({})).status,400);assert.equal((await flow.submit({cookie:'llmcom_oauth='+'x'.repeat(43)})).status,400);
  assert.equal((await flow.submit({cookie:'x',origin:'https://evil.example'})).status,403);
  assert.equal((await flow.submit({cookie:'x',origin:'null'})).status,403);
- const first=await flow.submitForm();assert.equal(first.status,303);assert.equal((await flow.submit()).status,400);
+ const first=await flow.submitForm();assert.equal(first.status,303);const duplicate=await flow.submit();assert.equal(duplicate.status,200);assert.match(await duplicate.text(),/already submitted/);
  const code=new URL(first.headers.get('location')).searchParams.get('code');
  const body={grant_type:'authorization_code',client_id:c,redirect_uri:redirect,resource,code,code_verifier:flow.verifier};
  for(const change of [{code_verifier:'z'.repeat(43)},{resource:'https://evil.example'},{client_id:'wrong'},{redirect_uri:redirect+'/wrong'}])assert.equal((await f.call('/oauth/token',{...body,...change})).status,400);
@@ -95,7 +95,7 @@ test('pending pairing survives restart, new codes and parallel browser tabs',asy
  // Both codes and both CSRF/cookie bindings remain valid after redeployment.
  assert.equal((await first.submit({cookie:first.cookie+'; '+second.cookie,origin})).status,303);
  assert.equal((await second.submitForm()).status,303);
- assert.equal((await first.submitForm()).status,400);
+ const repeated=await first.submitForm();assert.equal(repeated.status,200);assert.match(await repeated.text(),/already submitted/);
 });
 
 test('pairing lifetime stays ten minutes and pending secrets are stored hashed',async t=>{
