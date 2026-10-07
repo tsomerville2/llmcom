@@ -72,6 +72,8 @@ class ConnectorTests(unittest.TestCase):
             self.assertIn('type="password"',text)
             self.assertIn('Join myphone as phone-openai',text)
             self.assertNotIn('Bearer',text)
+            self.assertIn('https://llmcom-connector.fly.dev/setup#openai-connect',text)
+            self.assertNotIn('href="https://chatgpt.com/plugins"',text)
 
     def test_existing_phone_command_upgrades_without_losing_custom_commands(self):
         with tempfile.TemporaryDirectory() as d:
