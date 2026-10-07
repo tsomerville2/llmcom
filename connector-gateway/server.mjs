@@ -1,5 +1,6 @@
 // A single-machine, application-specific MCP gateway. Never proxies arbitrary URLs.
 import http from 'node:http';
+import {createOAuth} from './oauth.mjs';
 import {randomBytes, createHash, timingSafeEqual} from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -8,7 +9,7 @@ import {WebSocketServer, WebSocket} from 'ws';
 const hash = value => createHash('sha256').update(value).digest('hex');
 const secret = () => randomBytes(32).toString('base64url');
 const MAX = 262144;
-export function createGateway({directory, timeout=25000, maxRegistrations=10000}={}) {
+export function createGateway({directory, timeout=25000, maxRegistrations=10000, origin=process.env.PUBLIC_ORIGIN||'https://llmcom-connector.fly.dev'}={}) {
   fs.mkdirSync(directory,{recursive:true,mode:0o700});
   const file=path.join(directory,'accounts.json');
   const accounts=new Map(Object.entries(fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):{}));
@@ -32,6 +33,7 @@ export function createGateway({directory, timeout=25000, maxRegistrations=10000}
     if(!r || now-r.start>=window){r={start:now,count:0};rates.set(key,r);}
     return ++r.count>limit;
   }
+  const oauth=createOAuth({directory,origin,accountExists:id=>accounts.has(id),limited});
   async function body(req){
     let size=0;const chunks=[];
     for await(const chunk of req){size+=chunk.length;if(size>MAX)throw Error('Too large');chunks.push(chunk);}
@@ -46,6 +48,7 @@ export function createGateway({directory, timeout=25000, maxRegistrations=10000}
         res.writeHead(200,{'content-type':installer?'text/plain; charset=utf-8':'text/html; charset=utf-8','cache-control':'no-cache','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"});
         return res.end(fs.readFileSync(fileURLToPath(new URL(installer?'./install.sh':'./setup.html',import.meta.url))));
       }
+      if(await oauth.handle(req,res,url))return;
       // No browser origins are needed for this server-to-server connector.
       if(req.headers.origin)return reply(res,403,{error:'Browser origins are not permitted.'});
       if(url.pathname==='/health' && req.method==='GET')return reply(res,200,{ok:true,connected:sockets.size});
@@ -57,13 +60,18 @@ export function createGateway({directory, timeout=25000, maxRegistrations=10000}
         accounts.set(id,{deviceHash:hash(deviceKey),claudeHash:hash(claudeKey),created:new Date().toISOString()});save();
         return reply(res,201,{id,deviceKey,claudeKey});
       }
-      const match=url.pathname.match(/^\/(mcp|installations)\/([a-f0-9]{32})(\/rotate)?$/);
+      const oauthOwner=url.pathname==='/mcp'?oauth.resolve(req):null;
+      if(url.pathname==='/mcp'&&!oauthOwner){oauth.challenge(res);return reply(res,401,{error:'Connect your LLMCom account.'});}
+      const route=oauthOwner?'/mcp/'+oauthOwner:url.pathname;
+      const match=route.match(/^\/(mcp|installations)\/([a-f0-9]{32})(\/rotate|\/pair|\/oauth)?$/);
       if(!match)return reply(res,404,{error:'Not found.'});
       const [,kind,id,rotate]=match, account=accounts.get(id);
-      if(!authorized(req,account,kind==='mcp'?'claudeHash':'deviceHash'))return reply(res,401,{error:'Invalid connector credential.'});
+      if(!oauthOwner&&!authorized(req,account,kind==='mcp'?'claudeHash':'deviceHash'))return reply(res,401,{error:'Invalid connector credential.'});
       if(kind==='installations'){
-        if(req.method==='DELETE'&&!rotate){accounts.delete(id);save();sockets.get(id)?.close(1008,'Revoked');return reply(res,200,{disabled:true});}
-        if(req.method==='POST'&&rotate){const claudeKey=secret();account.claudeHash=hash(claudeKey);save();return reply(res,200,{claudeKey});}
+        if(req.method==='POST'&&rotate==='/pair')return reply(res,200,oauth.pair(id));
+        if(req.method==='DELETE'&&rotate==='/oauth'){oauth.revoke(id);return reply(res,200,{revoked:true});}
+        if(req.method==='DELETE'&&!rotate){oauth.revoke(id);accounts.delete(id);save();sockets.get(id)?.close(1008,'Revoked');return reply(res,200,{disabled:true});}
+        if(req.method==='POST'&&rotate==='/rotate'){const claudeKey=secret();account.claudeHash=hash(claudeKey);save();return reply(res,200,{claudeKey});}
         if(req.method==='GET'&&!rotate)return reply(res,200,{connected:sockets.get(id)?.readyState===WebSocket.OPEN});
         return reply(res,405,{error:'Method not allowed.'});
       }
@@ -78,7 +86,7 @@ export function createGateway({directory, timeout=25000, maxRegistrations=10000}
       if([...pending.values()].filter(p=>p.owner===id).length>=4)return reply(res,429,{error:'Too many concurrent requests.'});
       const rid=secret();
       const timer=setTimeout(()=>finish(rid,504,{error:'Local tool timed out. A send may have completed; retry only with the same request_id.'}),timeout);
-      pending.set(rid,{owner:id,socket,res,timer});
+      pending.set(rid,{owner:id,socket,res,timer,oauth:!!oauthOwner,method:request.method});
       res.once('close',()=>{const p=pending.get(rid);if(p){clearTimeout(p.timer);pending.delete(rid);}});
       socket.send(JSON.stringify({type:'request',id:rid,request}),err=>{if(err)finish(rid,503,{error:'Local connection lost; send outcome may be uncertain.'});});
     }catch{reply(res,400,{error:'Invalid or oversized request.'});}
@@ -95,7 +103,12 @@ export function createGateway({directory, timeout=25000, maxRegistrations=10000}
         let message;try{message=JSON.parse(raw);}catch{ws.close(1008,'Invalid response');return;}
         const p=pending.get(message.id);
         if(!p || p.owner!==id || p.socket!==ws)return;
-        if(message.type==='response')finish(message.id,message.response===null?202:200,message.response??undefined);
+        if(message.type==='response'){
+          if(p.oauth && p.method==='tools/list' && Array.isArray(message.response?.result?.tools)){
+            message.response.result.tools=message.response.result.tools.map(tool=>({...tool,securitySchemes:[{type:'oauth2',scopes:['llmcom']}],_meta:{...tool._meta,securitySchemes:[{type:'oauth2',scopes:['llmcom']}]}}));
+          }
+          finish(message.id,message.response===null?202:200,message.response??undefined);
+        }
         else if(message.type==='failure')finish(message.id,502,{error:'Local tool failed. A send may have completed; reuse its request_id.'});
       });
       ws.on('error',()=>{});

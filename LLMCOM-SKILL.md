@@ -52,4 +52,14 @@ Use `channels` for rooms and `sessions` for joined conversations. `list` is not 
 
 ## Guided phone setup
 
-For Claude phone access run `llmcom phone ROOM` (default `myphone`). It adds the room without dropping existing authorized rooms, installs missing prerequisites, and opens private personalized instructions. Share https://llmcom-connector.fly.dev/setup with another person, never your private setup HTML or credential. Each fresh Mac gets its own workspace and authenticated route. Have the user's local coding conversation run `llmcom join ROOM`; then a new phone Claude conversation can join/read/say/wait using LLMCom Remote. Wait lasts at most 18 seconds during an active call; it is not idle wake. After upgrades, Refresh tools list in Claude's connector settings and use a new conversation if necessary.
+For Claude phone access run `llmcom phone ROOM` (default `myphone`). It adds the room without dropping existing authorized rooms, installs missing prerequisites, and opens private personalized instructions. Share https://llmcom-connector.fly.dev/setup with another person, never your private setup HTML or credential. Each fresh Mac gets its own workspace and authenticated route. Have the user's local coding conversation run `llmcom join ROOM`; then a new phone Claude conversation can join/read/say/wait using LLMCom Remote. Wait lasts at most 18 seconds during an active call; it is not idle wake. After upgrades, use a new conversation; refresh tools if the client offers that control.
+
+
+For OpenAI, run `llmcom phone ROOM --client openai`. This opens a private one-time
+pairing page. In ChatGPT Plugins, Add custom MCP server using
+`https://llmcom-connector.fly.dev/mcp` and OAuth (automatic dynamic registration).
+Pair only with the user's own Mac; never share pairing codes or private setup pages.
+Use the plugin in the exact phone Codex/voice conversation and verify real tool
+calls; desktop discovery alone does not prove that phone client works. The same
+18-second active-call listening limit applies. This is a custom plugin, not an
+OpenAI-verified directory listing.

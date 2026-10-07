@@ -61,3 +61,31 @@ class ConnectorTests(unittest.TestCase):
             page=(folder/'claude-setup.html').read_text()
             self.assertIn('join myphone as my-phone',page)
             self.assertIn('https://llmcom-connector.fly.dev/setup',page)
+
+    def test_openai_page_uses_shared_url_private_pairing_and_selected_room(self):
+        with tempfile.TemporaryDirectory() as d:
+            page=connector.openai_setup_page(Path(d),{'serverUrl':'https://example.com/mcp','pairingCode':'private-code'}, {'channels':['bridge','myphone'],'setupChannel':'myphone'})
+            text=page.read_text()
+            self.assertEqual(page.stat().st_mode&0o777,0o600)
+            self.assertIn('Server URL:',text)
+            self.assertIn('value="https://example.com/mcp"',text)
+            self.assertIn('type="password"',text)
+            self.assertIn('Join myphone as phone-openai',text)
+            self.assertNotIn('Bearer',text)
+
+    def test_existing_phone_command_upgrades_without_losing_custom_commands(self):
+        with tempfile.TemporaryDirectory() as d:
+            home=Path(d);folder=home/'.config/agentworkforce/connector';folder.mkdir(parents=True)
+            stack=home/'stack';(stack/'node_modules/ws').mkdir(parents=True);(stack/'node_modules/ws/package.json').write_text('{}')
+            (folder.parent/'stack.json').write_text('{}')
+            old="import sys, argparse\ndef main():\n    if len(sys.argv)>1 and sys.argv[1]=='phone':\n        pass # old-phone\n    if len(sys.argv)>1 and sys.argv[1]=='connector':\n        pass\n    pass # custom-command\n"
+            (stack/'llmcom.py').write_text(old)
+            config={'id':'a'*32,'gateway':'https://example.com','deviceKey':'d'*43,'claudeKey':'c'*43,'channels':['myphone']}
+            (folder/'config.json').write_text(json.dumps(config))
+            with patch('pathlib.Path.home',return_value=home),patch('onboard.STACK',stack),patch('onboard.install_node'),patch('shutil.copy2'),patch('connector.launch'),patch('connector.api',return_value={'connected':True}),patch('desktop_mcp.runtime',return_value=[{'name':'myphone'}]),patch('builtins.print'):
+                for _ in range(2):connector.main(['enable','--channel','myphone','--no-open'])
+            updated=(stack/'llmcom.py').read_text()
+            self.assertIn("phone.add_argument('--client'",updated)
+            self.assertEqual(updated.count("sys.argv[1]=='phone'"),1)
+            self.assertIn('custom-command',updated)
+            self.assertNotIn('old-phone',updated)

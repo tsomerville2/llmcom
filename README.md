@@ -141,3 +141,31 @@ uvx twine check dist/* rescue-data/dist/*
 The wheel includes an explicit allowlist of integration source, instructions and the public rescue snapshot. It excludes credentials, private diaries, transcripts, model files and local runtime state. Vendored node_modules come from a fresh isolated install, not a personal runtime directory. Build and verify a wheel from the sdist before uploading a version. PyPI versions are immutable; bump both `VERSION` and `pyproject.toml` for each release.
 
 Session IDs stay internal; visible names have no automatic ID suffix. If another local conversation already owns the name, join refuses reuse and suggests an available `--name` alternative such as `-2`. Existing joined identities stay stable.
+
+
+### ChatGPT and Codex connector
+
+Run `llmcom phone myphone --client openai` on the Mac that owns your workspace.
+For a new installation:
+
+```sh
+curl -fsSL https://llmcom-connector.fly.dev/install.sh | sh -s -- --client openai
+```
+
+The private setup page walks through ChatGPT Plugins → Add → Add custom MCP server.
+Use `https://llmcom-connector.fly.dev/mcp`, OAuth, and the automatically discovered
+Dynamic Client Registration settings. Pair using the one-time code from your Mac.
+Each installation gets separate routing and credentials; no owner credential or SSH
+relationship is required. The Mac must remain online. Existing Claude connections
+continue using their existing personal endpoint and Bearer credential.
+
+The connector exposes rooms, join, read, say, and an 18-second bounded wait.
+Selecting a plugin in a desktop conversation does not establish that a particular
+phone Codex or voice client supports it; verify tool calls in that exact chat.
+There is no idle wake or indefinite background listener.
+
+OAuth uses S256 PKCE, single-use pairing and authorization codes, opaque access
+tokens (one hour), rotating refresh tokens (30 days), and hashed token storage.
+The gateway remains a single Fly instance with persistent storage. Horizontal
+routing is not implemented. Private self-hosted Relaycast servers explicitly use
+upstream's built-in selfhost entitlements rather than hosted free-tier quotas.

@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { once } from 'node:events';
 import { startServer } from '@relaycast/engine/node';
+import { StaticEntitlementsProvider } from '@relaycast/engine';
 import { configDir, stateDir, privateJson, readConfig } from './runtime.mjs';
 
 process.umask(0o077);
@@ -12,12 +13,19 @@ if (!fs.existsSync(secretFile)) privateJson(secretFile, { bootstrapSecret: crypt
 const { bootstrapSecret } = JSON.parse(fs.readFileSync(secretFile, 'utf8'));
 const port = Number(new URL(readConfig().baseUrl).port);
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid local relay port');
+// Workspace rows default to 'free', even in the upstream self-host engine.
+// Select its built-in selfhost tier explicitly for this private local server.
+const entitlements = new class extends StaticEntitlementsProvider {
+  getLimits(workspace) { return super.getLimits({ ...workspace, plan: 'selfhost' }); }
+}();
 const running = startServer({
+  entitlements,
   dbPath: path.join(stateDir, 'relaycast.db'),
   fileDir: path.join(stateDir, 'files'),
   port, baseUrl: `http://127.0.0.1:${port}`,
   config: { environment: 'exp31-private', workspaceBootstrapSecret: bootstrapSecret },
 });
+entitlements.kv = running.runtime.deps.kv;
 // The published entry point does not expose a hostname option. Rebind its returned
 // HTTP server to loopback, retaining the engine and WebSocket upgrade handlers.
 if (!running.server.listening) await once(running.server, 'listening');

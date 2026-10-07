@@ -15,7 +15,7 @@ jobs:
       - name: Connector gateway and device integration
         run: |
           npm ci --prefix connector-gateway
-          node --test connector-gateway/test_gateway.mjs
+          node --test connector-gateway/test_*.mjs
       - name: Offline onboarding regression checks
         run: /usr/bin/python3 -m unittest discover -p 'test_*.py' -v
       - name: Build wheel from source distribution
