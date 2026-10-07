@@ -58,11 +58,12 @@ def runtime(*args):
 def main():
     if len(sys.argv)>1 and sys.argv[1]=='phone':
         from connector import main as connector_main
-        phone=argparse.ArgumentParser(description='Set up Claude phone access and open your personal instructions.')
+        phone=argparse.ArgumentParser(description='Set up phone access and open your personal instructions.')
         phone.add_argument('channel',nargs='?',default='myphone')
         phone.add_argument('--no-open',action='store_true')
+        phone.add_argument('--client',choices=['claude','openai'],default='claude')
         args=phone.parse_args(sys.argv[2:])
-        connector_main(['enable','--channel',args.channel,'--add-channels']+(['--no-open'] if args.no_open else []));return
+        connector_main(['enable','--channel',args.channel,'--add-channels','--client',args.client]+(['--no-open'] if args.no_open else []));return
     if len(sys.argv)>1 and sys.argv[1]=='connector':
         from connector import main as connector_main
         connector_main(sys.argv[2:]);return

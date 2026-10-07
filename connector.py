@@ -1,4 +1,4 @@
-"""Install and manage this Mac's outbound Claude connector."""
+"""Install and manage this Mac's outbound phone connector."""
 import argparse
 import html
 import json
@@ -37,7 +37,7 @@ def setup_page(folder, config):
 <li>Server URL:<input id="url" readonly value="__CONNECTOR_URL__"><button onclick="copy('url')">Copy URL</button></li>
 <li>Under authentication select <b>No sign-in</b>. The warning is expected: we use an API key. Under <b>Request headers</b>, set Header name to <b>Authorization</b>, paste the value below into Value, and leave Required checked:<input id="key" type="password" readonly value="__CONNECTOR_KEY__"><button onclick="copy('key')">Copy Authorization value</button><button onclick="document.getElementById('key').type='text'">Reveal locally</button></li>
 <li>Save the connector. On your phone, start a <b>new chat</b> with the same Claude account and enable <b>LLMCom Remote</b> in its Connectors menu. Approve its tools when Claude asks.</li></ol>
-<h2>Connect both ends</h2><p>In your existing local Claude Code or Codex conversation, ask it to run <code>llmcom join FIRST_ROOM</code>.</p><p>Then tell phone Claude: <b>“Use LLMCom Remote to join FIRST_ROOM as my-phone, say hello, then listen for replies.”</b></p><p>Listening holds an active tool call for up to 18 seconds. It cannot wake an idle chat. Ask to listen again when you want another window. Your Mac must stay awake.</p><p>If the wait tool is missing: on Claude desktop, open this connector’s More options → Refresh tools list, then start a new phone chat.</p>
+<h2>Connect both ends</h2><p>In your existing local Claude Code or Codex conversation, ask it to run <code>llmcom join FIRST_ROOM</code>.</p><p>Then tell phone Claude: <b>“Use LLMCom Remote to join FIRST_ROOM as my-phone, say hello, then listen for replies.”</b></p><p>Listening holds an active tool call for up to 18 seconds. It cannot wake an idle chat. Ask to listen again when you want another window. Your Mac must stay awake.</p><p>If the wait tool is missing, start a new phone chat after connecting. Use a refresh-tools control on desktop if your client provides one.</p>
 <p>This private file contains your connector credential. Do not share it. This is an LLMCom custom connector, not an Anthropic-verified directory listing.</p>
 <script>async function copy(id){const el=document.getElementById(id);try{await navigator.clipboard.writeText(el.value)}catch{const before=el.type;el.type='text';el.select();document.execCommand('copy');el.type=before}}</script>'''
     text=text.replace('FIRST_ROOM',html.escape(config.get('setupChannel',config['channels'][0]))).replace('ROOM',html.escape(', '.join(config['channels']))).replace('__CONNECTOR_URL__',html.escape(url,quote=True)).replace('__CONNECTOR_KEY__',html.escape('Bearer '+config['claudeKey'],quote=True))
@@ -46,6 +46,16 @@ def setup_page(folder, config):
     with os.fdopen(fd,'w') as handle:handle.write(text)
     file.chmod(0o600)
     return file
+
+def openai_setup_page(folder,pairing,config):
+    room=html.escape(config.get('setupChannel',config['channels'][0]))
+    page=folder/'openai-setup.html'
+    text='''<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>LLMCom for ChatGPT and Codex</title><style>body{font:18px/1.6 system-ui;max-width:760px;margin:40px auto;padding:24px;color:#173042}input{width:100%;padding:12px;box-sizing:border-box;font:16px monospace}li{margin:16px 0}button{padding:12px;margin:8px 0}</style><h1>Connect LLMCom to ChatGPT and Codex</h1><ol><li>Open <a href="https://chatgpt.com/plugins" target="_blank" rel="noreferrer">ChatGPT Plugins</a>. Choose <b>Add → Add custom MCP server</b>. Name it <b>LLMCom</b>.</li><li>Server URL: <input readonly value="__SERVER_URL__"></li><li>Choose <b>OAuth</b>. Leave optional client credentials blank for dynamic registration. Create the plugin, install it, and connect it.</li><li>On the LLMCom sign-in page, paste this one-time pairing code:<input type="password" id="pair" readonly value="PAIR"><button onclick="navigator.clipboard.writeText(document.getElementById('pair').value)">Copy pairing code</button><p>Expires in 10 minutes; run the setup command again for another code. Keep this page private.</p></li><li>In your ChatGPT/Codex conversation select <b>@LLMCom</b>, then ask: “Join ROOM as phone-openai, say hello, then listen for replies.”</li></ol><p>Your local coding peers should run <code>llmcom join ROOM</code>. Keep the Mac awake. Phone availability depends on your OpenAI client/workspace; verify the plugin appears in the exact phone coding chat before claiming success. Listening currently lasts up to 18 seconds per call.</p>'''
+    text=text.replace('__SERVER_URL__',html.escape(pairing['serverUrl'],quote=True)).replace('PAIR',html.escape(pairing['pairingCode'],quote=True)).replace('ROOM',room)
+    fd=os.open(page,os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
+    with os.fdopen(fd,'w') as f:f.write(text)
+    page.chmod(0o600)
+    return page
 
 def launch(folder,config_path):
     target=Path.home()/'Library/LaunchAgents'/f'{LABEL}.plist'
@@ -79,6 +89,7 @@ def main(argv=None):
     p.add_argument('action',choices=['enable','status','disable','rotate-key'])
     p.add_argument('--channel',action='append',default=[])
     p.add_argument('--gateway')
+    p.add_argument('--client',choices=['claude','openai'],default='claude')
     p.add_argument('--add-channels',action='store_true',help='Preserve existing rooms while adding requested rooms.')
     p.add_argument('--no-open',action='store_true')
     a=p.parse_args(argv)
@@ -87,7 +98,7 @@ def main(argv=None):
     if a.action=='status':
         if not config:print(json.dumps({'enabled':False}));return
         state=api(config['gateway'],'/installations/'+config['id'],token=config['deviceKey'])
-        print(json.dumps({'enabled':True,**state,'channels':config['channels'],'url':config['gateway']+'/mcp/'+config['id'],'setupFile':str(folder/'claude-setup.html')},indent=2));return
+        print(json.dumps({'enabled':True,**state,'channels':config['channels'],'url':config['gateway']+'/mcp'+('' if a.client=='openai' else '/'+config['id']),'setupFile':str(folder/'claude-setup.html')},indent=2));return
     if a.action=='disable':
         if not config:print('Connector is already disabled.');return
         subprocess.run(['launchctl','bootout',f'gui/{os.getuid()}/{LABEL}'],capture_output=True)
@@ -124,13 +135,30 @@ def main(argv=None):
             if (source/name).resolve()!=(stack/name).resolve():shutil.copy2(source/name,stack/name)
         # Add the new CLI entry point without replacing local runtime extensions.
         cli=stack/'llmcom.py'
-        if cli.exists() and "sys.argv[1]=='phone'" not in cli.read_text():
+        if cli.exists():
             current=cli.read_text()
-            addition=(source/'llmcom.py').read_text().split('def main():\n',1)[1].split("    if len(sys.argv)>1 and sys.argv[1]=='connector':",1)[0]
+            marker="    if len(sys.argv)>1 and sys.argv[1]=='connector':"
+            addition=(source/'llmcom.py').read_text().split('def main():\n',1)[1].split(marker,1)[0]
             if 'def main():\n' not in current:raise ValueError('Cannot update local CLI; run llmcom upgrade, then retry.')
-            backup=cli.with_name('llmcom.py.before-phone')
-            if not backup.exists():shutil.copy2(cli,backup)
-            cli.write_text(current.replace('def main():\n','def main():\n'+addition,1))
+            before,body=current.split('def main():\n',1)
+            if "sys.argv[1]=='phone'" in body:
+                if marker not in body:raise ValueError('Cannot update local phone command; run llmcom upgrade.')
+                body=marker+body.split(marker,1)[1]
+            updated=before+'def main():\n'+addition+body
+            if updated!=current:
+                backup=cli.with_name('llmcom.py.before-phone')
+                if not backup.exists():shutil.copy2(cli,backup)
+                cli.write_text(updated)
+        # Apply the self-host entitlement fix on this Mac only; never rewrite a remote server.
+        from connection import service_mode
+        stack_config=json.loads((Path.home()/'.config/agentworkforce/stack.json').read_text())
+        if service_mode(Path.home(),stack_config)=='server':
+            server=stack/'server.mjs'
+            if (source/'server.mjs').resolve()!=server.resolve() and (not server.exists() or server.read_bytes()!=(source/'server.mjs').read_bytes()):
+                if server.exists():shutil.copy2(server,server.with_name('server.mjs.before-phone-upgrade'))
+                shutil.copy2(source/'server.mjs',server)
+                subprocess.run(['launchctl','kickstart','-k',f'gui/{os.getuid()}/com.exp31.agentworkforce.server'],check=True,capture_output=True)
+                onboard.wait_health(stack_config['baseUrl'])
         from desktop_mcp import runtime
         available=runtime('channels')
         available=available if isinstance(available,list) else available.get('channels',[])
@@ -147,7 +175,10 @@ def main(argv=None):
             time.sleep(.5)
         else:raise ValueError('Registered but local service did not connect. Run llmcom connector status; credentials are saved for retry.')
     page=setup_page(folder,config)
-    print(json.dumps({'connected':api(config['gateway'],'/installations/'+config['id'],token=config['deviceKey'])['connected'],'channels':config['channels'],'url':config['gateway']+'/mcp/'+config['id'],'setupFile':str(page),'guide':GATEWAY+'/setup','next':'Follow the opened personal setup page, then start a new Claude phone chat.'},indent=2))
+    if a.client=='openai':
+        pairing=api(config['gateway'],'/installations/'+config['id']+'/pair',method='POST',token=config['deviceKey'],data={})
+        page=openai_setup_page(folder,pairing,config)
+    print(json.dumps({'connected':api(config['gateway'],'/installations/'+config['id'],token=config['deviceKey'])['connected'],'channels':config['channels'],'url':config['gateway']+'/mcp'+('' if a.client=='openai' else '/'+config['id']),'setupFile':str(page),'guide':GATEWAY+'/setup','next':'Follow the opened personal setup page, then start a new '+('ChatGPT/Codex' if a.client=='openai' else 'Claude')+' phone chat.'},indent=2))
     if not a.no_open:subprocess.run(['open',str(page)],check=True)
 
 if __name__=='__main__':
