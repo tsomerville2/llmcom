@@ -1,1 +1,1 @@
-{"name":"llmcom-connector-gateway","version":"0.4.4","private":true,"type":"module","dependencies":{"ws":"8.22.0"},"scripts":{"start":"node server.mjs","test":"node --test test_*.mjs"}}
+{"name":"llmcom-connector-gateway","version":"0.4.5","private":true,"type":"module","dependencies":{"ws":"8.22.0"},"scripts":{"start":"node server.mjs","test":"node --test test_*.mjs"}}

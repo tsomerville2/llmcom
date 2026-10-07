@@ -63,3 +63,6 @@ Use the plugin in the exact phone Codex/voice conversation and verify real tool
 calls; desktop discovery alone does not prove that phone client works. The same
 18-second active-call listening limit applies. This is a custom plugin, not an
 OpenAI-verified directory listing.
+
+## Agent-assisted phone setup
+When asked to connect ChatGPT/Codex on a phone, run `llmcom phone myphone --client openai` (substitute the requested room). It provisions the local helper, prints a private one-time code and connection-guide URL, and opens the private setup page. Do the CLI work for the user rather than asking them to copy commands. Keep codes out of shared channels and logs. If browser control is available, guide the user through the actual signed-in ChatGPT Add custom MCP server or existing LLMCom Connect flow; respect browser requirements for the final access approval. Never claim installation, account pairing, or phone voice succeeded merely because the command exited successfully.
