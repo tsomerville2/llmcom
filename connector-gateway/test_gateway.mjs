@@ -58,7 +58,7 @@ test('notification returns HTTP 202 and GET does not pretend to be SSE',async t=
 
 test('real device process and Python tools isolate two homes and deduplicate sends',async t=>{
  const {spawn}=await import('node:child_process');
- const f=await fixture(t,5000), root=path.resolve(import.meta.dirname,'..');
+ const f=await fixture(t,75000), root=path.resolve(import.meta.dirname,'..');
  async function local(a){
   const home=fs.mkdtempSync(path.join(os.tmpdir(),'llmcom-device-'));t.after(()=>fs.rmSync(home,{recursive:true,force:true}));
   const stack=path.join(home,'.local/share/agentworkforce/stack'), conf=path.join(home,'.config/agentworkforce/connector');
@@ -82,18 +82,25 @@ test('real device process and Python tools isolate two homes and deduplicate sen
  const join=await tool(a,'llmcom_join',{channel:'room',name:'test'}),cid=JSON.parse(join.result.content[0].text).conversation_id;
  assert.ok((await tool(b,'llmcom_read',{channel:'room',conversation_id:cid})).error);
  assert.ok((await tool(a,'llmcom_join',{channel:'secret',name:'test'})).error);
- const args={channel:'room',conversation_id:cid,text:'only once',request_id:'retry-proof'};
+ const args={channel:'room',conversation_id:cid,text:'only once',request_id:'retry-proof',wait_for_reply:false};
  assert.deepEqual(await tool(a,'llmcom_say',args),await tool(a,'llmcom_say',args));
  assert.equal(JSON.parse(fs.readFileSync(path.join(la.stack,'messages.json'))).length,1);
- const read=await tool(a,'llmcom_read',{channel:'room',conversation_id:cid});assert.equal(JSON.parse(read.result.content[0].text).messages.length,1);
+ const read=await tool(a,'llmcom_read',{channel:'room',conversation_id:cid});assert.equal(JSON.parse(read.result.content[0].text).messages.length,0);
+ const startedWait=Date.now();
+ const waiting=tool(a,'llmcom_say',{channel:'room',conversation_id:cid,text:'question',request_id:'auto-wait-proof'});
+ const messagesFile=path.join(la.stack,'messages.json');
+ for(let i=0;i<50;i++){if(JSON.parse(fs.readFileSync(messagesFile)).length===2)break;await delay(30);}
+ await delay(20500);
+ const messages=JSON.parse(fs.readFileSync(messagesFile));assert.equal(messages.length,2);messages.push({id:'3',text:'peer response',agentName:'test-peer'});fs.writeFileSync(messagesFile,JSON.stringify(messages));
+ const answer=JSON.parse((await waiting).result.content[0].text);assert.equal(answer.wait_status,'messages');assert.ok(Date.now()-startedWait>18000);assert.ok(Date.now()-startedWait<60000);assert.deepEqual(answer.messages.map(m=>m.text),['peer response']);
 });
 
 test('public setup guide is available without opening browser access to private routes',async t=>{
  const f=await fixture(t);
  for(const route of ['/', '/setup']){
   const r=await fetch(f.base+route);assert.equal(r.status,200);assert.match(r.headers.get('content-type'),/text\/html/);
-  const text=await r.text();assert.match(text,/llmcom phone myphone/);assert.match(text,/18 seconds/);assert.doesNotMatch(text,/rk_live_/);
+  const text=await r.text();assert.match(text,/llmcom phone myphone/);assert.match(text,/60 seconds/);assert.doesNotMatch(text,/rk_live_/);
  }
- const install=await fetch(f.base+'/install.sh');assert.equal(install.status,200);assert.match(await install.text(),/llmcom>=0.4.5/);
+ const install=await fetch(f.base+'/install.sh');assert.equal(install.status,200);assert.match(await install.text(),/llmcom>=0.4.7/);
  const blocked=await f.call('/installations',null,{version:1},'POST',{Origin:'https://evil.example'});assert.equal(blocked.status,403);
 });

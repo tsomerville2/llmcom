@@ -25,7 +25,7 @@ class RemoteTests(unittest.TestCase):
             self.assertIn('error',call('llmcom_read',{'channel':'room','conversation_id':cid},'bob'))
             r=call('llmcom_read',{'channel':'room','conversation_id':cid,'after':'10','limit':3})
             self.assertEqual([m['id'] for m in json.loads(r['result']['content'][0]['text'])['messages']],['11','12','13'])
-            args={'channel':'room','conversation_id':cid,'text':'hello','request_id':'one-request'}
+            args={'channel':'room','conversation_id':cid,'text':'hello','request_id':'one-request','wait_for_reply':False}
             self.assertEqual(call('llmcom_say',args),call('llmcom_say',args))
             self.assertEqual(sum(c[0]=='post' for c in calls),1)
             accounts['alice']['channels']=[]
@@ -65,4 +65,24 @@ class RemoteTests(unittest.TestCase):
                 allowed=False
             with patch('remote_chat.time.sleep',side_effect=revoke):
                 with self.assertRaises(PermissionError):tool('llmcom_wait',args)
+            store.close()
+
+    def test_say_waits_and_filters_own_messages_without_losing_cursor(self):
+        with tempfile.TemporaryDirectory() as d:
+            store=SubscriptionStore(Path(d)/'state.db',lambda o,c:True)
+            sent=[];history=[]
+            def runtime(*args):
+                if args[0]=='post':sent.append(args);return {'id':'10','sent':True}
+                return history
+            chat=Chat(store,lambda:{'alice':{'channels':['room']}},runtime)
+            def call(name,args):return chat.dispatch({'jsonrpc':'2.0','method':'tools/call','params':{'name':name,'arguments':args}},'alice')
+            cid=json.loads(call('llmcom_join',{'name':'voice','channel':'room'})['content'][0]['text'])['conversation_id']
+            history[:]=[{'id':'12','agentName':'peer','text':'hello back'},{'id':'11','text':'[Remote chat alice/voice '+cid[:8]+'] my echo'}]
+            args={'channel':'room','conversation_id':cid,'text':'hello','request_id':'test-auto'}
+            result=call('llmcom_say',args);value=json.loads(result['content'][0]['text'])
+            self.assertEqual(value['wait_status'],'messages');self.assertEqual([m['id'] for m in value['messages']],['12'])
+            self.assertEqual(result,call('llmcom_say',args));self.assertEqual(len(sent),1)
+            history[:]=[{'id':'13','text':'[Remote chat alice/voice '+cid[:8]+'] own only'}]
+            value=json.loads(call('llmcom_read',{'channel':'room','conversation_id':cid,'after':'12'})['content'][0]['text'])
+            self.assertEqual(value['messages'],[]);self.assertEqual(value['next_after'],'13')
             store.close()

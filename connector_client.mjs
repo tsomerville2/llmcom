@@ -16,7 +16,7 @@ function dispatch(request){return new Promise((resolve,reject)=>{
   const child=spawn(python,[path.join(dir,'connector_worker.py'),configPath],{stdio:['pipe','pipe','ignore'],env:{...process.env,NODE_OPTIONS:''}});
   let data='',settled=false;
   function finish(error,value){if(settled)return;settled=true;clearTimeout(timer);error?reject(error):resolve(value);}
-  const timer=setTimeout(()=>{child.kill('SIGKILL');finish(Error('Timeout'));},23000);
+  const timer=setTimeout(()=>{child.kill('SIGKILL');finish(Error('Timeout'));},70000);
   child.stdout.on('data',chunk=>{data+=chunk;if(Buffer.byteLength(data)>262144){child.kill('SIGKILL');finish(Error('Oversized reply'));}});
   child.on('error',e=>finish(e));
   child.on('close',code=>{try{if(code!==0)throw Error('Worker failed');finish(null,JSON.parse(data));}catch(e){finish(e);}});
