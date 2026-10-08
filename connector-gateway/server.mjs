@@ -43,9 +43,13 @@ export function createGateway({directory, timeout=75000, maxRegistrations=10000,
   const server=http.createServer(async(req,res)=>{
     try {
       const url=new URL(req.url,'http://gateway');
+      if(req.method==='GET' && ['/images/claude-add.jpg','/images/claude-url.jpg','/images/claude-auth.jpg'].includes(url.pathname)){
+        res.writeHead(200,{'content-type':'image/jpeg','cache-control':'public, max-age=3600','x-content-type-options':'nosniff'});
+        return res.end(fs.readFileSync(fileURLToPath(new URL('.'+url.pathname,import.meta.url))));
+      }
       if(req.method==='GET' && ['/', '/setup', '/install.sh'].includes(url.pathname)){
         const installer=url.pathname==='/install.sh';
-        res.writeHead(200,{'content-type':installer?'text/plain; charset=utf-8':'text/html; charset=utf-8','cache-control':'no-cache','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"});
+        res.writeHead(200,{'content-type':installer?'text/plain; charset=utf-8':'text/html; charset=utf-8','cache-control':'no-cache','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"});
         return res.end(fs.readFileSync(fileURLToPath(new URL(installer?'./install.sh':'./setup.html',import.meta.url))));
       }
       if(await oauth.handle(req,res,url))return;

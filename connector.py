@@ -34,9 +34,9 @@ def setup_page(folder, config):
 <style>body{font:18px system-ui;max-width:760px;margin:50px auto;padding:20px;color:#173042}input{width:100%;padding:10px;margin:8px 0;font:14px monospace;box-sizing:border-box}button{padding:8px;margin:4px}li{margin:16px 0}</style>
 <h1>Connect your phone to LLMCom</h1><p>Keep this page on your Mac. Complete the Claude setup in your desktop browser; then use the same Claude account on your phone.</p><p><a href="https://llmcom-connector.fly.dev/setup" target="_blank" rel="noreferrer">Public setup guide and troubleshooting</a></p><p>Your Mac must be awake and online. Allowed rooms: ROOM.</p>
 <ol><li>Open <a href="https://claude.ai/customize/connectors" target="_blank" rel="noreferrer">Claude Connectors</a> and add a custom connector named <b>LLMCom Remote</b>.</li>
-<li>Server URL:<input id="url" readonly value="__CONNECTOR_URL__"><button onclick="copy('url')">Copy URL</button></li>
+<li>Server URL:<input id="url" readonly value="__CONNECTOR_URL__"><button onclick="copy('url')">Copy URL</button> Paste into Claude’s MCP server URL field, then click <b>Continue</b>.</li>
 <li>Under authentication select <b>No sign-in</b>. The warning is expected: we use an API key. Under <b>Request headers</b>, set Header name to <b>Authorization</b>, paste the value below into Value, and leave Required checked:<input id="key" type="password" readonly value="__CONNECTOR_KEY__"><button onclick="copy('key')">Copy Authorization value</button><button onclick="document.getElementById('key').type='text'">Reveal locally</button></li>
-<li>Save the connector. On your phone, start a <b>new chat</b> with the same Claude account and enable <b>LLMCom Remote</b> in its Connectors menu. Approve its tools when Claude asks.</li></ol>
+<li>If <b>Request headers</b> is missing, stop: this account screen cannot complete this connection method. Otherwise click <b>Add</b> to save the connector. On your phone, start a <b>new chat</b> with the same Claude account and enable <b>LLMCom Remote</b> in its Connectors menu. Approve its tools when Claude asks.</li></ol>
 <h2>Connect both ends</h2><p>In your existing local Claude Code or Codex conversation, ask it to run <code>llmcom join FIRST_ROOM</code>.</p><p>Then tell phone Claude: <b>“Use LLMCom Remote to join FIRST_ROOM as my-phone, say hello, then listen for replies.”</b></p><p>Listening holds an active tool call for up to 60 seconds. It cannot wake an idle chat. Ask to listen again when you want another window. Your Mac must stay awake.</p><p>If the wait tool is missing, start a new phone chat after connecting. Use a refresh-tools control on desktop if your client provides one.</p>
 <p>This private file contains your connector credential. Do not share it. This is an LLMCom custom connector, not an Anthropic-verified directory listing.</p>
 <script>async function copy(id){const el=document.getElementById(id);try{await navigator.clipboard.writeText(el.value)}catch{const before=el.type;el.type='text';el.select();document.execCommand('copy');el.type=before}}</script>'''
@@ -141,7 +141,7 @@ def main(argv=None):
             addition=(source/'llmcom.py').read_text().split('def main():\n',1)[1].split(marker,1)[0]
             if 'def main():\n' not in current:raise ValueError('Cannot update local CLI; run llmcom upgrade, then retry.')
             before,body=current.split('def main():\n',1)
-            if "sys.argv[1]=='phone'" in body:
+            if "sys.argv[1]=='phone'" in body or "sys.argv[1] in ('phone','--setup')" in body:
                 if marker not in body:raise ValueError('Cannot update local phone command; run llmcom upgrade.')
                 body=marker+body.split(marker,1)[1]
             updated=before+'def main():\n'+addition+body

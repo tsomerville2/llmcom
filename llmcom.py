@@ -56,14 +56,35 @@ def runtime(*args):
     return subprocess.run([str(NODE), str(STACK / 'awstack.mjs'), *args], check=True, env=environment)
 
 def main():
-    if len(sys.argv)>1 and sys.argv[1]=='phone':
+    if len(sys.argv)>1 and sys.argv[1] in ('phone','--setup'):
         from connector import main as connector_main
-        phone=argparse.ArgumentParser(description='Set up phone access and open your personal instructions.')
+        guided = sys.argv[1] == '--setup'
+        phone=argparse.ArgumentParser(description='Prepare this Mac for phone access; --setup also joins when run inside a coding conversation.')
         phone.add_argument('channel',nargs='?',default='myphone')
         phone.add_argument('--no-open',action='store_true')
+        phone.add_argument('--open',action='store_true',help='Open the optional private browser instructions.')
         phone.add_argument('--client',choices=['claude','openai'],default='claude')
         args=phone.parse_args(sys.argv[2:])
-        connector_main(['enable','--channel',args.channel,'--add-channels','--client',args.client]+(['--no-open'] if args.no_open else []));return
+        room = channel_name(args.channel)
+        connector_main(['enable','--channel',room,'--add-channels','--client',args.client]+(['--no-open'] if args.no_open or (guided and not args.open) else []))
+        if guided:
+            onboard.install_skill()
+            inside = bool(os.environ.get('CODEX_THREAD_ID') or os.environ.get('CLAUDE_CODE_SESSION_ID'))
+            if inside:
+                print('Joining this coding conversation to '+room+'...', flush=True)
+                subprocess.run([sys.executable,str(Path(__file__).parent/'llmcom'),'join',room],check=True)
+                print('Local join command completed. Native receipt and a phone round trip still need verification.')
+            else:
+                print('NEXT: In your existing Claude Code or Codex chat, ask: Run llmcom join '+room+' and reply to my phone.')
+            if args.client == 'claude':
+                print('CLAUDE: https://claude.ai/customize/connectors')
+                print('Add > Add custom connector. Name: LLMCom Remote. The private setup file above contains your URL and Authorization value. Paste the URL, Continue, choose No sign-in, add an Authorization request header, then Add.')
+                print('If Request headers is missing, stop: this account screen cannot finish this connection method.')
+            print('PHONE: Enable LLMCom in a new chat; ask it to join '+room+' as my-phone, say hello, then listen for replies.')
+            print('AGENT: Continue setup using the installed llmcom skill (llmcom --skill). Help with the browser if available; the user handles sign-in/access approval. Keep credentials private. Verify a message in both directions before claiming success.')
+            print('Optional illustrated help: https://llmcom-connector.fly.dev/setup#'+args.client)
+            print('Open private instructions: llmcom phone '+room+' --client '+args.client)
+        return
     if len(sys.argv)>1 and sys.argv[1]=='connector':
         from connector import main as connector_main
         connector_main(sys.argv[2:]);return

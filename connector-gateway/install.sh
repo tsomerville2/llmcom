@@ -14,6 +14,6 @@ else
   llmcom_uv="$HOME/.local/bin/uv"
 fi
 echo 'Installing LLMCom from PyPI...'
-"$llmcom_uv" tool install --upgrade --force --refresh --index-url https://pypi.org/simple 'llmcom>=0.4.8'
-echo 'Opening guided phone setup...'
-exec "$llmcom_uv" tool run --refresh --index-url https://pypi.org/simple --from 'llmcom>=0.4.8' llmcom phone myphone "$@"
+"$llmcom_uv" tool install --upgrade --force --refresh --index-url https://pypi.org/simple 'llmcom>=0.4.9'
+echo 'Preparing this Mac and printing next steps...'
+exec "$llmcom_uv" tool run --refresh --index-url https://pypi.org/simple --from 'llmcom>=0.4.9' llmcom --setup "$@"
