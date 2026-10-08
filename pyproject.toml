@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "llmcom"
-version = "0.4.9"
+version = "0.4.10"
 description = "Live text channels inside existing warmed Claude and Codex conversations."
 readme = "README.md"
 requires-python = ">=3.9"

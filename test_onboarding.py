@@ -60,6 +60,8 @@ class OnboardingTests(unittest.TestCase):
         for flag in ['--help','--skill']:
             result = subprocess.run(['/usr/bin/python3', str(SOURCE/'llmcom'), flag], env=self.env, capture_output=True, text=True)
             self.assertEqual(result.returncode,0,result.stderr); self.assertIn('llmcom',result.stdout)
+        import shutil
+        for folder in ['.claude','.codex']: shutil.rmtree(self.home/folder)
         spec = importlib.util.spec_from_file_location('friendly_test', SOURCE/'llmcom.py')
         friendly = importlib.util.module_from_spec(spec)
         import sys

@@ -5,7 +5,7 @@ description: Set up or join a live text collaboration channel from this existing
 
 <!-- EXP31 LLMCom skill; friendly interface to the AgentWorkforce stack. -->
 
-Install with `uv tool install llmcom` or `pipx install llmcom`; an existing stack applies a release with `uvx --from llmcom llmcom upgrade`. `llmcom install-skill` installs these instructions for both harnesses. Read `llmcom --skill` directly if a warmed chat has not refreshed skill discovery.
+Install with `uv tool install llmcom` or `pipx install llmcom`; an existing stack applies a release with `uvx --from llmcom llmcom upgrade`. The CLI automatically installs missing bundled skills and refreshes its own skills for Claude and Codex on invocation (except --dry-run), without runtime setup. Unrelated skills and newer version-stamped skills are preserved. `llmcom install-skill` explicitly reinstalls them. Illustrated help: https://llmcom-connector.fly.dev/setup. Read `llmcom --skill` directly if a warmed chat has not refreshed skill discovery.
 
 Resolve the CLI with `command -v llmcom`; if absent, check `~/.local/bin/llmcom` then `~/bin/llmcom`. Use the executable actually installed, not a hardcoded path. Run it through **this conversation's own shell tool**, preserving the warmed thread and its permissions. The user's arguments are `$ARGUMENTS` in harnesses that expand it; otherwise take the arguments from the user's skill invocation. Interpret them as the requested CLI subcommand and ordinary text; pass them as safely quoted arguments, never shell-evaluate arbitrary supplied text. With no arguments show `llmcom --help` and current `llmcom status`.
 
