@@ -51,7 +51,7 @@ class ConnectorTests(unittest.TestCase):
             with patch('pathlib.Path.home',return_value=home),patch('onboard.STACK',stack),patch('onboard.install_node'),patch('shutil.copy2'),patch('connector.launch'),patch('connector.api',return_value={'connected':True}) as api,patch('desktop_mcp.runtime',return_value=[{'name':'bridge'}]) as runtime,patch('builtins.print'):
                 connector.main(['enable','--channel','myphone','--add-channels','--no-open'])
             saved=json.loads((folder/'config.json').read_text())
-            self.assertIn("sys.argv[1]=='phone'",(stack/'llmcom.py').read_text())
+            self.assertIn("sys.argv[1] in ('phone','--setup')",(stack/'llmcom.py').read_text())
             self.assertIn('preserve-custom-extension',(stack/'llmcom.py').read_text())
             self.assertEqual(saved['channels'],['bridge','myphone'])
             self.assertEqual(saved['id'],config['id'])
@@ -88,6 +88,6 @@ class ConnectorTests(unittest.TestCase):
                 for _ in range(2):connector.main(['enable','--channel','myphone','--no-open'])
             updated=(stack/'llmcom.py').read_text()
             self.assertIn("phone.add_argument('--client'",updated)
-            self.assertEqual(updated.count("sys.argv[1]=='phone'"),1)
+            self.assertEqual(updated.count("sys.argv[1] in ('phone','--setup')"),1)
             self.assertIn('custom-command',updated)
             self.assertNotIn('old-phone',updated)

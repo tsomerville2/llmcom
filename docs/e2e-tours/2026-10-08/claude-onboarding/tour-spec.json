@@ -1,0 +1,74 @@
+{
+  "title": "Claude onboarding: real screens and a blocker",
+  "slug": "claude-onboarding",
+  "summary": "Fresh Claude browser walkthrough and published installer rerun.",
+  "materiality": "Existing Mac installer succeeded; clean Mac and David account not tested. No connector was saved on the inspected account.",
+  "source_dir": "docs/e2e-tours/2026-10-08/claude-onboarding/source",
+  "scratch_dir": "tests/bdd/.capture/e2e-tours/2026-10-08/claude-onboarding",
+  "publish_dir": "docs/e2e-tours/2026-10-08/claude-onboarding",
+  "frames_dir": "frames",
+  "gif_name": "claude-onboarding.gif",
+  "markdown_name": "claude-onboarding.md",
+  "covered": [
+    "Published installer completed and helper connected on existing Mac.",
+    "Claude Add menu, URL form and authentication form inspected live."
+  ],
+  "defects": [
+    "Guide omitted Continue before authentication; corrected.",
+    "Inspected Claude account lacks Request headers even under Advanced; API-key connection cannot finish there."
+  ],
+  "not_materially_proven": [
+    "Fresh Mac installation",
+    "David account linking and phone voice round trip"
+  ],
+  "todos": [
+    "Test David account for Request headers; if absent provide a tested alternative authentication flow."
+  ],
+  "slides": [
+    {
+      "kind": "proof",
+      "number": "1",
+      "title": "Add custom connector",
+      "anchor": "Phone setup / Claude",
+      "story": "Open Claude Connectors, then Add.",
+      "callout": "Use the Add menu, not directory search.",
+      "source": "claude-add.jpg",
+      "crop": [
+        0,
+        0,
+        860,
+        330
+      ]
+    },
+    {
+      "kind": "proof",
+      "number": "2",
+      "title": "Paste the private URL",
+      "anchor": "Phone setup / URL",
+      "story": "Real form with illustrative field text, not a usable URL.",
+      "callout": "Copy your own URL from the generated private page, then Continue.",
+      "source": "claude-url.jpg",
+      "crop": [
+        0,
+        0,
+        536,
+        432
+      ]
+    },
+    {
+      "kind": "proof",
+      "number": "3",
+      "title": "Missing request headers",
+      "anchor": "Phone setup / authentication blocker",
+      "story": "No sign-in selected; Advanced exposes transport only.",
+      "callout": "This account cannot complete the API-key path. Do not claim connection success.",
+      "source": "claude-auth.jpg",
+      "crop": [
+        0,
+        0,
+        536,
+        967
+      ]
+    }
+  ]
+}

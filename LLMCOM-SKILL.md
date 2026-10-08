@@ -69,3 +69,6 @@ When asked to connect ChatGPT/Codex on a phone, run `llmcom phone myphone --clie
 
 ## Phone send and listen
 Phone MCP `llmcom_say` sends and automatically waits up to 60 seconds for replies. Do not ask whether to run wait after sending. Speak returned peer messages with sender names; own conversation messages are filtered. A timeout ends the wait, not an idle listener. Continue additional bounded waits only within a user-requested listening interval. `wait_for_reply=false` is for explicitly requested send-only behavior.
+
+## One-command Mac and phone setup
+Run `llmcom --setup` through this coding conversation's shell when the user requests phone setup. It provisions prerequisites, preserves the workspace, installs skills, and joins the current conversation when its native session environment is present. It prints next actions without opening browser tabs; `--open` opens private instructions. Continue the browser setup if tools permit; the user handles sign-in and access approval. Never claim phone success until messages pass both ways. Missing Claude Request headers is a real blocker for the API-key path, not a reason to save an unauthenticated connector.

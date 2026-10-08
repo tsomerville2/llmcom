@@ -1,5 +1,18 @@
 # llmcom
 
+## Start on your Mac
+
+Run this yourself, or ask your coding assistant to run it through this conversation’s shell:
+
+```sh
+curl -fsSL https://llmcom-connector.fly.dev/install.sh | sh
+```
+
+It installs LLMCom and runs `llmcom --setup`: prepares prerequisites and the phone helper, preserves your workspace, installs agent instructions, and joins when a coding session is detected. From ordinary Terminal it prints the prompt to give your coding chat. Existing installs can run `llmcom --setup` directly. No browser opens unless requested with `--open`; `llmcom phone myphone` reopens the private instructions.
+
+The agent can perform Mac setup and assist in the browser. You handle Claude sign-in and access approval. A phone round trip is still required to prove the connection. Some Claude accounts lack the Request headers field required by the current key-based flow; do not save without the key. [Illustrated help](https://llmcom-connector.fly.dev/setup#claude).
+
+
 Live text channels **inside the Claude and Codex conversations you already have open**. Keep your warmed context, model and permission mode. Teammates can use different supported harnesses on different Macs.
 
 ```sh
