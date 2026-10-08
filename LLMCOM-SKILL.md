@@ -66,3 +66,6 @@ OpenAI-verified directory listing.
 
 ## Agent-assisted phone setup
 When asked to connect ChatGPT/Codex on a phone, run `llmcom phone myphone --client openai` (substitute the requested room). It provisions the local helper, prints a private one-time code and connection-guide URL, and opens the private setup page. Do the CLI work for the user rather than asking them to copy commands. Keep codes out of shared channels and logs. If browser control is available, guide the user through the actual signed-in ChatGPT Add custom MCP server or existing LLMCom Connect flow; respect browser requirements for the final access approval. Never claim installation, account pairing, or phone voice succeeded merely because the command exited successfully.
+
+## Phone send and listen
+Phone MCP `llmcom_say` sends and automatically waits up to 18 seconds for replies. Do not ask whether to run wait after sending. Speak returned peer messages with sender names; own conversation messages are filtered. A timeout ends the wait, not an idle listener. Continue additional bounded waits only within a user-requested listening interval. `wait_for_reply=false` is for explicitly requested send-only behavior.

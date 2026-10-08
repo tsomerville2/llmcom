@@ -82,10 +82,15 @@ test('real device process and Python tools isolate two homes and deduplicate sen
  const join=await tool(a,'llmcom_join',{channel:'room',name:'test'}),cid=JSON.parse(join.result.content[0].text).conversation_id;
  assert.ok((await tool(b,'llmcom_read',{channel:'room',conversation_id:cid})).error);
  assert.ok((await tool(a,'llmcom_join',{channel:'secret',name:'test'})).error);
- const args={channel:'room',conversation_id:cid,text:'only once',request_id:'retry-proof'};
+ const args={channel:'room',conversation_id:cid,text:'only once',request_id:'retry-proof',wait_for_reply:false};
  assert.deepEqual(await tool(a,'llmcom_say',args),await tool(a,'llmcom_say',args));
  assert.equal(JSON.parse(fs.readFileSync(path.join(la.stack,'messages.json'))).length,1);
- const read=await tool(a,'llmcom_read',{channel:'room',conversation_id:cid});assert.equal(JSON.parse(read.result.content[0].text).messages.length,1);
+ const read=await tool(a,'llmcom_read',{channel:'room',conversation_id:cid});assert.equal(JSON.parse(read.result.content[0].text).messages.length,0);
+ const waiting=tool(a,'llmcom_say',{channel:'room',conversation_id:cid,text:'question',request_id:'auto-wait-proof'});
+ const messagesFile=path.join(la.stack,'messages.json');
+ for(let i=0;i<50;i++){if(JSON.parse(fs.readFileSync(messagesFile)).length===2)break;await delay(30);}
+ const messages=JSON.parse(fs.readFileSync(messagesFile));assert.equal(messages.length,2);messages.push({id:'3',text:'peer response',agentName:'test-peer'});fs.writeFileSync(messagesFile,JSON.stringify(messages));
+ const answer=JSON.parse((await waiting).result.content[0].text);assert.equal(answer.wait_status,'messages');assert.deepEqual(answer.messages.map(m=>m.text),['peer response']);
 });
 
 test('public setup guide is available without opening browser access to private routes',async t=>{
@@ -94,6 +99,6 @@ test('public setup guide is available without opening browser access to private 
   const r=await fetch(f.base+route);assert.equal(r.status,200);assert.match(r.headers.get('content-type'),/text\/html/);
   const text=await r.text();assert.match(text,/llmcom phone myphone/);assert.match(text,/18 seconds/);assert.doesNotMatch(text,/rk_live_/);
  }
- const install=await fetch(f.base+'/install.sh');assert.equal(install.status,200);assert.match(await install.text(),/llmcom>=0.4.5/);
+ const install=await fetch(f.base+'/install.sh');assert.equal(install.status,200);assert.match(await install.text(),/llmcom>=0.4.6/);
  const blocked=await f.call('/installations',null,{version:1},'POST',{Origin:'https://evil.example'});assert.equal(blocked.status,403);
 });
