@@ -14,6 +14,6 @@ else
   llmcom_uv="$HOME/.local/bin/uv"
 fi
 echo 'Installing LLMCom from PyPI...'
-"$llmcom_uv" tool install --upgrade --force --refresh --index-url https://pypi.org/simple 'llmcom>=0.4.10'
+"$llmcom_uv" tool install --upgrade --force --refresh --index-url https://pypi.org/simple 'llmcom>=0.4.11'
 echo 'Preparing this Mac and printing next steps...'
-exec "$llmcom_uv" tool run --refresh --index-url https://pypi.org/simple --from 'llmcom>=0.4.10' llmcom --setup "$@"
+exec "$llmcom_uv" tool run --refresh --index-url https://pypi.org/simple --from 'llmcom>=0.4.11' llmcom --setup "$@"

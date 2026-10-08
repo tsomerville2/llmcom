@@ -24,7 +24,8 @@ elif command in ['--help', '-h', 'help']:
     if friendly:
         print('''llmcom — live collaboration without leaving your warmed chat
 
-Start here: llmcom --setup
+Start here: llmcom --setup (local first; phone failures are nonfatal)
+Local only: llmcom --setup --local-only (no Fly connection)
 Illustrated website: https://llmcom-connector.fly.dev/setup
 Bundled Claude/Codex skills install and refresh automatically when this CLI runs.
 Agents: read llmcom --skill, then complete setup and verify a message both ways.
