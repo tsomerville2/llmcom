@@ -14,12 +14,20 @@ if not (source / 'onboard.py').exists():
     source = Path.home() / '.local/share/agentworkforce/stack'
 sys.path.insert(0, str(source))
 command = sys.argv[1] if len(sys.argv) > 1 else '--help'
+if friendly and '--dry-run' not in sys.argv:
+    from onboard import ensure_skills
+    ensure_skills()
 os.environ['PATH'] = str(Path.home() / '.local/share/agentworkforce/node/bin') + ':' + str(Path.home() / 'bin') + ':' + os.environ.get('PATH', '')
 if command == '--version':
     print(('llmcom ' if friendly else 'awstack ') + (source / 'VERSION').read_text().strip())
 elif command in ['--help', '-h', 'help']:
     if friendly:
         print('''llmcom — live collaboration without leaving your warmed chat
+
+Start here: llmcom --setup
+Illustrated website: https://llmcom-connector.fly.dev/setup
+Bundled Claude/Codex skills install and refresh automatically when this CLI runs.
+Agents: read llmcom --skill, then complete setup and verify a message both ways.
 
   /llmcom setup channel-A              Create the team's named channel
   /llmcom join channel-A               Join as this chat; infer its renamed title
@@ -29,6 +37,8 @@ Setup is idempotent; saved connection settings and healthy dependencies are reus
 Join creates a missing room and preserves this chat identity when repeated.
 Join must run through the warmed chat's shell tool to capture its native address.
 
+  llmcom --setup                      Prepare phone access; join this coding chat when detected
+  llmcom phone myphone                Open guided Claude phone setup (creates room automatically)
   llmcom connector enable --channel bridge   Set up phone/voice access through Claude Connectors
   llmcom connector status             Check the outbound connector connection
   llmcom desktop serve-chat --help    Authenticated remote tools for Chat/voice (on-demand)

@@ -95,6 +95,43 @@ def install_skill():
             shutil.copy2(SOURCE / file, target / 'SKILL.md')
             if (SOURCE / 'references').exists(): shutil.copytree(SOURCE / 'references', target / 'references', dirs_exist_ok=True)
 
+def ensure_skills():
+    """Refresh our bundled skills without runtime setup or replacing other skills."""
+    version = (SOURCE / 'VERSION').read_text().strip()
+    def version_key(value):
+        try: return tuple(int(x) for x in value.strip().split('.'))
+        except ValueError: return ()
+    for root in [HOME / '.codex/skills', HOME / '.claude/skills']:
+        for name, filename, marker in [('agentworkforce','SKILL.md','EXP31 AgentWorkforce skill'), ('llmcom','LLMCOM-SKILL.md','EXP31 LLMCom skill')]:
+            target = root / name
+            try:
+                skill = target / 'SKILL.md'
+                if target.is_symlink() or skill.is_symlink():
+                    continue
+                if skill.exists() and marker not in skill.read_text():
+                    print('llmcom: preserving unrelated skill at '+str(target), file=sys.stderr)
+                    continue
+                stamp = target / '.llmcom-version'
+                if stamp.exists() and version_key(stamp.read_text()) > version_key(version):
+                    continue
+                files = [(SOURCE / filename, skill)]
+                refs = SOURCE / 'references'
+                if refs.exists():
+                    files += [(f, target / 'references' / f.relative_to(refs)) for f in refs.rglob('*') if f.is_file()]
+                for src, dest in files:
+                    if dest.is_symlink(): continue
+                    data = src.read_bytes()
+                    if dest.exists() and dest.read_bytes() == data: continue
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    temporary = dest.with_name(dest.name+'.tmp-'+str(os.getpid()))
+                    temporary.write_bytes(data)
+                    temporary.replace(dest)
+                if not stamp.exists() or stamp.read_text() != version:
+                    stamp.write_text(version)
+            except OSError as error:
+                print('llmcom: could not refresh skill '+str(target)+': '+str(error)+'. Read llmcom --skill for bundled instructions.', file=sys.stderr)
+
+
 def backup(file):
     if file.exists():
         target = file.with_name(file.name + '.agentworkforce-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + '.bak')
