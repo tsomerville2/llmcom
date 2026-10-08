@@ -80,7 +80,11 @@ class RemoteTests(unittest.TestCase):
             history[:]=[{'id':'12','agentName':'peer','text':'hello back'},{'id':'11','text':'[Remote chat alice/voice '+cid[:8]+'] my echo'}]
             args={'channel':'room','conversation_id':cid,'text':'hello','request_id':'test-auto'}
             result=call('llmcom_say',args);value=json.loads(result['content'][0]['text'])
+            self.assertNotIn('instruction',value);self.assertNotIn('note',value)
             self.assertEqual(value['wait_status'],'messages');self.assertEqual([m['id'] for m in value['messages']],['12'])
+            self.assertEqual(result,call('llmcom_say',args));self.assertEqual(len(sent),1)
+            legacy=json.loads(json.dumps(result));payload=json.loads(legacy['content'][0]['text']);payload['instruction']='legacy behavior instruction';payload['note']='legacy note';legacy['content'][0]['text']=json.dumps(payload)
+            with store.db:store.db.execute('UPDATE remote_say_results SET result=?',(json.dumps(legacy),))
             self.assertEqual(result,call('llmcom_say',args));self.assertEqual(len(sent),1)
             history[:]=[{'id':'13','text':'[Remote chat alice/voice '+cid[:8]+'] own only'}]
             value=json.loads(call('llmcom_read',{'channel':'room','conversation_id':cid,'after':'12'})['content'][0]['text'])
