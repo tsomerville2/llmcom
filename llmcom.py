@@ -59,31 +59,58 @@ def main():
     if len(sys.argv)>1 and sys.argv[1] in ('phone','--setup'):
         from connector import main as connector_main
         guided = sys.argv[1] == '--setup'
-        phone=argparse.ArgumentParser(description='Prepare this Mac for phone access; --setup also joins when run inside a coding conversation.')
+        phone=argparse.ArgumentParser(description='Set up local collaboration first; --setup then tries optional phone access without making phone failure fatal.')
         phone.add_argument('channel',nargs='?',default='myphone')
         phone.add_argument('--no-open',action='store_true')
         phone.add_argument('--open',action='store_true',help='Open the optional private browser instructions.')
+        if guided: phone.add_argument('--local-only',action='store_true',help='Finish local setup without contacting the phone gateway.')
         phone.add_argument('--client',choices=['claude','openai'],default='claude')
         args=phone.parse_args(sys.argv[2:])
         room = channel_name(args.channel)
-        connector_main(['enable','--channel',room,'--add-channels','--client',args.client]+(['--no-open'] if args.no_open or (guided and not args.open) else []))
-        if guided:
-            onboard.install_skill()
-            inside = bool(os.environ.get('CODEX_THREAD_ID') or os.environ.get('CLAUDE_CODE_SESSION_ID'))
-            if inside:
-                print('Joining this coding conversation to '+room+'...', flush=True)
-                subprocess.run([sys.executable,str(Path(__file__).parent/'llmcom'),'join',room],check=True)
-                print('Local join command completed. Native receipt and a phone round trip still need verification.')
-            else:
-                print('NEXT: In your existing Claude Code or Codex chat, ask: Run llmcom join '+room+' and reply to my phone.')
+        connector_args = ['enable','--channel',room,'--add-channels','--client',args.client]+(['--no-open'] if args.no_open or (guided and not args.open) else [])
+        if not guided:
+            connector_main(connector_args)
+            return
+        onboard.ensure_skills()
+        command = [sys.executable,str(Path(__file__).parent/'llmcom')]
+        print('1/3 Preparing the local workspace and room...', flush=True)
+        # Existing remote workspaces are reused; an unconfigured Mac defaults to local.
+        subprocess.run(command+['setup',room],check=True)
+        print('Workspace and room ready. Phone access is optional.', flush=True)
+        inside = bool(os.environ.get('CODEX_THREAD_ID') or os.environ.get('CLAUDE_CODE_SESSION_ID'))
+        joined = False
+        if inside:
+            print('2/3 Joining this coding conversation...', flush=True)
+            try:
+                subprocess.run(command+['join',room],check=True)
+                joined = True
+                print('Local join completed. Verify native receipt with another coding chat.')
+            except subprocess.CalledProcessError:
+                print('Local workspace is ready, but this conversation could not join. Follow the join error above, then retry llmcom join '+room+'.',file=sys.stderr)
+        else:
+            print('2/3 Join from your coding chat: Run llmcom join '+room+' in this conversation.')
+        phone_ready = False
+        if args.local_only:
+            print('3/3 Phone setup skipped (--local-only). No Fly connection attempted.')
+        else:
+            print('3/3 Trying optional phone access (up to 60 seconds)...', flush=True)
+            try:
+                subprocess.run(command+['connector',*connector_args],check=True,timeout=60)
+                phone_ready = True
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+                print('Phone setup is unavailable or incomplete. Your workspace and local chat setup are retained. Local collaboration does not require Fly.',file=sys.stderr)
+                print('Retry phone access later: llmcom phone '+room+' --client '+args.client)
+        if phone_ready:
             if args.client == 'claude':
                 print('CLAUDE: https://claude.ai/customize/connectors')
-                print('Add > Add custom connector. Name: LLMCom Remote. The private setup file above contains your URL and Authorization value. Paste the URL, Continue, choose No sign-in, add an Authorization request header, then Add.')
-                print('If Request headers is missing, stop: this account screen cannot finish this connection method.')
-            print('PHONE: Enable LLMCom in a new chat; ask it to join '+room+' as my-phone, say hello, then listen for replies.')
-            print('AGENT: Continue setup using the installed llmcom skill (llmcom --skill). Help with the browser if available; the user handles sign-in/access approval. Keep credentials private. Verify a message in both directions before claiming success.')
-            print('Optional illustrated help: https://llmcom-connector.fly.dev/setup#'+args.client)
-            print('Open private instructions: llmcom phone '+room+' --client '+args.client)
+                print('Add > Add custom connector. Name: LLMCom Remote. Use the private setup file above for the URL and Authorization value. Paste the URL, Continue, choose No sign-in, add an Authorization request header, then Add.')
+                print('If Request headers is missing, phone linking cannot finish on that screen; local collaboration still works.')
+            print('PHONE: Enable LLMCom in a new chat; join '+room+' as my-phone, say hello, then listen for replies.')
+        print('LOCAL: Other coding chats can run llmcom join '+room+'. Read llmcom --skill for bundled instructions; no website is required.')
+        print('Optional illustrated help: https://llmcom-connector.fly.dev/setup#'+args.client)
+        print(json.dumps({'workspaceReady':True,'localJoin':'joined' if joined else ('failed' if inside else 'run-inside-coding-chat'),'phoneSetup':'ready-for-account-linking' if phone_ready else ('skipped' if args.local_only else 'deferred'),'endToEndVerified':False}))
+        if inside and not joined:
+            raise SystemExit(2)
         return
     if len(sys.argv)>1 and sys.argv[1]=='connector':
         from connector import main as connector_main

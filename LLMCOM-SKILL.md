@@ -72,3 +72,6 @@ Phone MCP `llmcom_say` sends and automatically waits up to 60 seconds for replie
 
 ## One-command Mac and phone setup
 Run `llmcom --setup` through this coding conversation's shell when the user requests phone setup. It provisions prerequisites, preserves the workspace, installs skills, and joins the current conversation when its native session environment is present. It prints next actions without opening browser tabs; `--open` opens private instructions. Continue the browser setup if tools permit; the user handles sign-in and access approval. Never claim phone success until messages pass both ways. Missing Claude Request headers is a real blocker for the API-key path, not a reason to save an unauthenticated connector.
+
+## Progressive setup and gateway outages
+`llmcom --setup` installs/refreshes skills, prepares the workspace and room, and joins the invoking coding conversation before trying optional phone access. It preserves existing workspace routing. Phone errors or a 60-second timeout defer only phone setup; local collaboration remains available. `llmcom --setup --local-only` skips the phone gateway completely. Local workspace or join failures remain real failures: inspect and fix them; do not claim successful join from room readiness. Retry only the phone stage with `llmcom phone ROOM`. Help and skills are bundled and do not need the website.
