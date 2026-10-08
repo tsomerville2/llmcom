@@ -9,7 +9,7 @@ import {WebSocketServer, WebSocket} from 'ws';
 const hash = value => createHash('sha256').update(value).digest('hex');
 const secret = () => randomBytes(32).toString('base64url');
 const MAX = 262144;
-export function createGateway({directory, timeout=25000, maxRegistrations=10000, origin=process.env.PUBLIC_ORIGIN||'https://llmcom-connector.fly.dev'}={}) {
+export function createGateway({directory, timeout=75000, maxRegistrations=10000, origin=process.env.PUBLIC_ORIGIN||'https://llmcom-connector.fly.dev'}={}) {
   fs.mkdirSync(directory,{recursive:true,mode:0o700});
   const file=path.join(directory,'accounts.json');
   const accounts=new Map(Object.entries(fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):{}));

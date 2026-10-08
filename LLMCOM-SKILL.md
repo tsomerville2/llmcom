@@ -52,7 +52,7 @@ Use `channels` for rooms and `sessions` for joined conversations. `list` is not 
 
 ## Guided phone setup
 
-For Claude phone access run `llmcom phone ROOM` (default `myphone`). It adds the room without dropping existing authorized rooms, installs missing prerequisites, and opens private personalized instructions. Share https://llmcom-connector.fly.dev/setup with another person, never your private setup HTML or credential. Each fresh Mac gets its own workspace and authenticated route. Have the user's local coding conversation run `llmcom join ROOM`; then a new phone Claude conversation can join/read/say/wait using LLMCom Remote. Wait lasts at most 18 seconds during an active call; it is not idle wake. After upgrades, use a new conversation; refresh tools if the client offers that control.
+For Claude phone access run `llmcom phone ROOM` (default `myphone`). It adds the room without dropping existing authorized rooms, installs missing prerequisites, and opens private personalized instructions. Share https://llmcom-connector.fly.dev/setup with another person, never your private setup HTML or credential. Each fresh Mac gets its own workspace and authenticated route. Have the user's local coding conversation run `llmcom join ROOM`; then a new phone Claude conversation can join/read/say/wait using LLMCom Remote. Wait lasts at most 60 seconds during an active call; it is not idle wake. After upgrades, use a new conversation; refresh tools if the client offers that control.
 
 
 For OpenAI, run `llmcom phone ROOM --client openai`. This opens a private one-time
@@ -61,11 +61,11 @@ pairing page. In ChatGPT Plugins, Add custom MCP server using
 Pair only with the user's own Mac; never share pairing codes or private setup pages.
 Use the plugin in the exact phone Codex/voice conversation and verify real tool
 calls; desktop discovery alone does not prove that phone client works. The same
-18-second active-call listening limit applies. This is a custom plugin, not an
+60-second active-call listening limit applies. This is a custom plugin, not an
 OpenAI-verified directory listing.
 
 ## Agent-assisted phone setup
 When asked to connect ChatGPT/Codex on a phone, run `llmcom phone myphone --client openai` (substitute the requested room). It provisions the local helper, prints a private one-time code and connection-guide URL, and opens the private setup page. Do the CLI work for the user rather than asking them to copy commands. Keep codes out of shared channels and logs. If browser control is available, guide the user through the actual signed-in ChatGPT Add custom MCP server or existing LLMCom Connect flow; respect browser requirements for the final access approval. Never claim installation, account pairing, or phone voice succeeded merely because the command exited successfully.
 
 ## Phone send and listen
-Phone MCP `llmcom_say` sends and automatically waits up to 18 seconds for replies. Do not ask whether to run wait after sending. Speak returned peer messages with sender names; own conversation messages are filtered. A timeout ends the wait, not an idle listener. Continue additional bounded waits only within a user-requested listening interval. `wait_for_reply=false` is for explicitly requested send-only behavior.
+Phone MCP `llmcom_say` sends and automatically waits up to 60 seconds for replies. Do not ask whether to run wait after sending. Speak returned peer messages with sender names; own conversation messages are filtered. A timeout ends the wait, not an idle listener. Continue additional bounded waits only within a user-requested listening interval. `wait_for_reply=false` is for explicitly requested send-only behavior.
