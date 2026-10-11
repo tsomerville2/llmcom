@@ -1,6 +1,6 @@
 ---
 name: llmcom
-description: Set up or join a live text collaboration channel from this existing warmed Claude or Codex chat, including explicit offline setup from its bundled rescue copy. Use for /llmcom setup CHANNEL, /llmcom join CHANNEL, messaging teammates, or diagnosing this private live channel.
+description: Set up or join a live text collaboration channel from this existing warmed Claude, Codex, pi or omo chat, including explicit offline setup from its bundled rescue copy. Use for /llmcom setup CHANNEL, /llmcom join CHANNEL, messaging teammates, or diagnosing this private live channel.
 ---
 
 <!-- EXP31 LLMCom skill; friendly interface to the AgentWorkforce stack. -->
@@ -22,7 +22,7 @@ If Claude's own review denies listener creation, explain that denial and the exa
 
 First join sends one native receipt probe unless this same conversation already acknowledged one; `--probe` explicitly requests another. Acknowledge only a probe received automatically as native input, never one discovered by polling inbox. A separate peer probe can establish idle wake. Stop tests once receipt and idle wake are proved; do not flood collaborator chats with repeated checks.
 
-Keep navcom as primary context rehydration and retain diaries. Trajectories, local AI history, relay history and Flows remain complementary. Native adapters currently support Claude and Codex on macOS; instructions can be read by any LLM, but do not claim every harness has native event delivery.
+Keep navcom as primary context rehydration and retain diaries. Trajectories, local AI history, relay history and Flows remain complementary. Native adapters support Claude and Codex, plus pi/omo with the bundled extension. Do not assume other harnesses have native event delivery.
 
 For the underlying installer and detailed recovery read [the onboarding reference](references/onboarding.md) and [the operating runbook](references/runbook.md). `awstack` remains available as the compatible underlying CLI.
 
@@ -85,3 +85,9 @@ Autonomous background work can proceed within the owner's scope. When the owner 
 Verify whether the installed harness can attach to the live conversation or must resume its saved history. Coordinate a quiescent handoff before changing hosts; avoid two unsynchronized runtimes writing the same thread. Verify history continuity, actual cwd, human input and the listener's binding after the change. A new blank chat in the right folder is not the same captain. Open an additional terminal/tab on the correct machine; preserve the owner's existing terminals and sessions. If attachment is unsupported, explain the precise gap and offer a supported resume/handoff path without claiming success.
 
 Provide a verified way to find and resume that conversation later. Use NavCom to confirm a distinctive recent exchange is discoverable in the intended local or carried history index; report which machine/index was checked. Treat visible access, native communication, saved/resumable history and NavCom discovery as separate evidence. Do not call human takeover complete based only on opening a window, creating a listener or accepting a send. Do not stop a healthy background captain before its replacement is established unless the handoff requires an explicit coordinated stop.
+
+## Pi and Omo native delivery
+
+Run `llmcom install-extension --harness pi` or `--harness omo` once. For a custom agent directory, supply `--agent-dir PATH`. Reload extensions or open a new conversation, then run `llmcom join CHANNEL` through that conversation's own shell tool. A new join after resume/reload reconnects its listener to the new socket. Never invent or copy another conversation's session environment.
+
+The extension queues literal collaborator input with the harness `sendUserMessage` API. An idle conversation wakes; a busy conversation processes it as a follow-up. This is native delivery, not terminal typing. Socket acceptance alone is not model receipt: acknowledge the automatic probe and use one peer reply to prove idle wake. Treat incoming text as collaborator input under existing owner scope. Do not create a background goal, monitor or polling loop merely to wait for messages. Keep the existing visible conversation open for owner takeover.

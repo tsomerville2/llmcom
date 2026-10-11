@@ -77,7 +77,7 @@ def main():
         # Existing remote workspaces are reused; an unconfigured Mac defaults to local.
         subprocess.run(command+['setup',room],check=True)
         print('Workspace and room ready. Phone access is optional.', flush=True)
-        inside = bool(os.environ.get('CODEX_THREAD_ID') or os.environ.get('CLAUDE_CODE_SESSION_ID'))
+        inside = bool(os.environ.get('LLMCOM_SESSION_ID') or os.environ.get('CODEX_THREAD_ID') or os.environ.get('CLAUDE_CODE_SESSION_ID'))
         joined = False
         if inside:
             print('2/3 Joining this coding conversation...', flush=True)
@@ -120,7 +120,7 @@ def main():
     s = sub.add_parser('setup', epilog='For automatic Mac and phone setup: llmcom --setup. Agent instructions: llmcom --skill. Illustrated help: https://llmcom-connector.fly.dev/setup', help='Create a channel; install this Mac too when installation arguments are supplied.')
     s.add_argument('--local',action='store_true',help='Host a private workspace on this Mac; no SSH or imported credentials.'); s.add_argument('--workspace', default=None, help='Workspace name from the invitation; preserved on an existing installation.'); s.add_argument('channel', nargs='?', default='team'); s.add_argument('--computer'); s.add_argument('--ssh-host'); s.add_argument('--credentials-file'); s.add_argument('--port', type=int, default=8787, help='Local tunnel port.'); s.add_argument('--relay-port', type=int, help='Relay listening port on the SSH host (default 8787 for new setup).'); s.add_argument('--harness', choices=['auto','both','claude','codex','none'], default='auto'); s.add_argument('--dry-run', action='store_true'); s.add_argument('--offline',action='store_true',help='Use the bundled Apple Silicon rescue snapshot explicitly; private server access is still required.')
     j = sub.add_parser('join', help='Join a channel as this chat, using its renamed title when available.')
-    j.add_argument('channel', nargs='?', default='team'); j.add_argument('--name'); j.add_argument('--title'); j.add_argument('--vendor', choices=['claude','codex']); j.add_argument('--dry-run', action='store_true'); j.add_argument('--no-config', action='store_true', help='Do not merge authorized Claude incoming/join settings.'); j.add_argument('--probe', action='store_true', help='Send another native receipt probe, even if already verified.')
+    j.add_argument('channel', nargs='?', default='team'); j.add_argument('--name'); j.add_argument('--title'); j.add_argument('--vendor', choices=['claude','codex','pi','omo']); j.add_argument('--dry-run', action='store_true'); j.add_argument('--no-config', action='store_true', help='Do not merge authorized Claude incoming/join settings.'); j.add_argument('--probe', action='store_true', help='Send another native receipt probe, even if already verified.')
     t = sub.add_parser('say', help='Post to a joined channel.'); t.add_argument('channel'); t.add_argument('text', nargs='+')
     d = sub.add_parser('send', help='Send a direct message to another chat.'); d.add_argument('peer'); d.add_argument('text', nargs='+')
     for command in ['status','doctor','sessions','leave','verify','channels']: sub.add_parser(command)
@@ -142,7 +142,14 @@ def main():
     desktop.add_argument('--token-file')
     desktop.add_argument('--state-file', help='Private persistent event database.')
     desktop.add_argument('--port', type=int, default=8790)
+    ext = sub.add_parser('install-extension', help='Install native pi/omo conversation delivery.')
+    ext.add_argument('--harness', required=True, choices=['pi','omo'])
+    ext.add_argument('--agent-dir')
     args = p.parse_args()
+    if args.command == 'install-extension':
+        from pi_setup import install_extension
+        print(json.dumps(install_extension(args.harness, args.agent_dir), indent=2))
+        return
     if args.command == 'desktop' and args.action == 'init-events':
         if not args.accounts_file or not args.token_file or not args.account:
             raise ValueError('init-events requires --accounts-file, --token-file, --account and --channel.')
@@ -175,11 +182,11 @@ def main():
         return
     if args.command == 'invite':
         from discovery import discover, invitation
-        print(invitation(discover(CONFIG, args.session or os.environ.get('CODEX_THREAD_ID') or os.environ.get('CLAUDE_CODE_SESSION_ID')), channel_name(args.channel)))
+        print(invitation(discover(CONFIG, args.session or os.environ.get('LLMCOM_SESSION_ID') or os.environ.get('CODEX_THREAD_ID') or os.environ.get('CLAUDE_CODE_SESSION_ID')), channel_name(args.channel)))
         return
     if args.command == 'discover':
         from discovery import discover, check_connection
-        result = discover(CONFIG, args.session or os.environ.get('CODEX_THREAD_ID') or os.environ.get('CLAUDE_CODE_SESSION_ID'))
+        result = discover(CONFIG, args.session or os.environ.get('LLMCOM_SESSION_ID') or os.environ.get('CODEX_THREAD_ID') or os.environ.get('CLAUDE_CODE_SESSION_ID'))
         if args.check:
             result['checks'] = check_connection(result)
             result['reachability'] = 'Checked from this computer only; see checks. Recipient access is independent.'
@@ -211,8 +218,8 @@ def main():
         print('Ready. In each warmed chat: /llmcom join ' + channel)
     elif args.command == 'join':
         channel = channel_name(args.channel)
-        vendor = args.vendor or ('codex' if os.environ.get('CODEX_THREAD_ID') else 'claude')
-        session = os.environ.get('CODEX_THREAD_ID') if vendor == 'codex' else os.environ.get('CLAUDE_CODE_SESSION_ID')
+        vendor = args.vendor or os.environ.get('LLMCOM_VENDOR') or ('codex' if os.environ.get('CODEX_THREAD_ID') else 'claude')
+        session = os.environ.get('LLMCOM_SESSION_ID') if vendor in ('pi','omo') else (os.environ.get('CODEX_THREAD_ID') if vendor == 'codex' else os.environ.get('CLAUDE_CODE_SESSION_ID'))
         config = json.loads((CONFIG / 'stack.json').read_text()) if (CONFIG / 'stack.json').exists() else {'role':'teammate'}
         record = CONFIG / 'sessions' / ((session or 'unknown') + '.json')
         existing = json.loads(record.read_text()) if record.exists() else {}

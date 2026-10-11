@@ -57,7 +57,11 @@ await check('broker-delivery', () => {
   return 'CONNECTED';
 });
 const session = currentSession();
-if (process.env.CODEX_THREAD_ID) await check('existing-codex-app-server', async () => {
+if (process.env.LLMCOM_SESSION_ID) await check('existing-pi-omo-socket', () => {
+  if (!process.env.LLMCOM_TOKEN || !fs.existsSync(process.env.LLMCOM_SOCKET || '')) throw new Error('Load the LLMCom extension in this pi/omo conversation.');
+  return 'present; no message injected';
+});
+else if (process.env.CODEX_THREAD_ID) await check('existing-codex-app-server', async () => {
   await discoverCodexSocket(process.env.CODEX_THREAD_ID);
   return 'owns this loaded thread; no turn started';
 });
@@ -65,7 +69,7 @@ else if (process.env.CLAUDE_CODE_SESSION_ID) await check('existing-claude-socket
   if (!process.env.CLAUDE_CODE_MESSAGING_TOKEN || !fs.existsSync(process.env.CLAUDE_CODE_MESSAGING_SOCKET || '')) throw new Error('Live socket is unavailable; run through the current Claude tool.');
   return 'present; no message injected';
 });
-if (process.env.CLAUDE_CODE_SESSION_ID && !process.env.CODEX_THREAD_ID) await check('claude-inbound-policy', () => {
+if (!process.env.LLMCOM_SESSION_ID && process.env.CLAUDE_CODE_SESSION_ID && !process.env.CODEX_THREAD_ID) await check('claude-inbound-policy', () => {
   const paths = [path.join(os.homedir(), '.claude/settings.json'), path.join(process.cwd(), '.claude/settings.json'), path.join(process.cwd(), '.claude/settings.local.json')];
   const settings = paths.map(file => fs.existsSync(file) ? JSON.parse(fs.readFileSync(file)) : {});
   if (settings.some(s => ['hold', 'refuse'].includes(s.crossSessionInbound))) throw new Error('Claude settings hold/refuse peer messages. Inspect the named settings; do not claim the chat is live.');

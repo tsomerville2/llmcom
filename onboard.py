@@ -23,7 +23,7 @@ CONFIG = HOME / '.config/agentworkforce'
 STATE = HOME / '.local/state/agentworkforce'
 NODE_VERSION = '22.23.3'
 FILES = ['package.json', 'package-lock.json', 'runtime.mjs', 'cli.mjs', 'server.mjs', 'awstack', 'awstack.mjs',
-         'session.mjs', 'codex-session.mjs', 'channel.mjs', 'doctor.mjs', 'install-tools.py', 'onboard.py', 'rescue.py', 'SKILL.md', 'llmcom', 'llmcom.py', 'discovery.py', 'connection.py', 'tui.py', 'desktop_mcp.py', 'desktop_setup.py', 'mcp_events.py', 'event_protocol.py', 'event_tools.py', 'event_setup.py', 'event_server.py', 'remote_chat.py', 'connector.py', 'connector_client.mjs', 'connector_worker.py', 'event_worker.py', 'event_delivery.py', 'event_relay.mjs', 'LLMCOM-SKILL.md', 'VERSION']
+         'session.mjs', 'codex-session.mjs', 'pi-bridge.mjs', 'pi-extension.ts', 'pi_setup.py', 'channel.mjs', 'doctor.mjs', 'install-tools.py', 'onboard.py', 'rescue.py', 'SKILL.md', 'llmcom', 'llmcom.py', 'discovery.py', 'connection.py', 'tui.py', 'desktop_mcp.py', 'desktop_setup.py', 'mcp_events.py', 'event_protocol.py', 'event_tools.py', 'event_setup.py', 'event_server.py', 'remote_chat.py', 'connector.py', 'connector_client.mjs', 'connector_worker.py', 'event_worker.py', 'event_delivery.py', 'event_relay.mjs', 'LLMCOM-SKILL.md', 'VERSION']
 NODE_HASHES = {
     'arm64': '23b25245dcfb9af7262f8ff142e9e2e0af025368117329e7a7458a51e5922f53',
     'x64': '8a677b0219178efd6eb0e475457c4afb452b521a92f6e67845a73bd85727f2a8',
@@ -329,8 +329,8 @@ def ensure_installed_runtime(offline=False, dry_run=False):
 
 def connect(args):
     config = json.loads((CONFIG / 'stack.json').read_text()) if (CONFIG / 'stack.json').exists() else {'role': 'teammate'}
-    vendor = args.vendor or ('codex' if os.environ.get('CODEX_THREAD_ID') else 'claude')
-    session = os.environ.get('CODEX_THREAD_ID') if vendor == 'codex' else os.environ.get('CLAUDE_CODE_SESSION_ID')
+    vendor = args.vendor or os.environ.get('LLMCOM_VENDOR') or ('codex' if os.environ.get('CODEX_THREAD_ID') else 'claude')
+    session = os.environ.get('LLMCOM_SESSION_ID') if vendor in ('pi','omo') else (os.environ.get('CODEX_THREAD_ID') if vendor == 'codex' else os.environ.get('CLAUDE_CODE_SESSION_ID'))
     file = CONFIG / 'sessions' / ((session or 'unknown') + '.json')
     existing = json.loads(file.read_text()) if file.exists() else {}
     name = args.name or existing.get('name') or config['role'] + '-' + vendor + ('-' + session[:8] if session else '')
@@ -408,7 +408,7 @@ def main():
     sub.add_parser('doctor'); sub.add_parser('install-skill')
     u = sub.add_parser('upgrade'); u.add_argument('--dry-run', action='store_true')
     r = sub.add_parser('repair'); r.add_argument('--dry-run', action='store_true')
-    c = sub.add_parser('connect'); c.add_argument('--name'); c.add_argument('--vendor', choices=['claude','codex']); c.add_argument('--dry-run', action='store_true'); c.add_argument('--authorize-claude', action='store_true')
+    c = sub.add_parser('connect'); c.add_argument('--name'); c.add_argument('--vendor', choices=['claude','codex','pi','omo']); c.add_argument('--dry-run', action='store_true'); c.add_argument('--authorize-claude', action='store_true')
     a = sub.add_parser('authorize-claude'); a.add_argument('--agent', required=True)
     b = sub.add_parser('bundle'); b.add_argument('--output', required=True)
     args = p.parse_args()

@@ -13,7 +13,7 @@ It installs LLMCom and runs `llmcom --setup`: prepares your workspace and room, 
 The agent can perform Mac setup and assist in the browser. You handle Claude sign-in and access approval. A phone round trip is still required to prove the connection. Some Claude accounts lack the Request headers field required by the current key-based flow; do not save without the key. [Illustrated help](https://llmcom-connector.fly.dev/setup#claude).
 
 
-Live text channels **inside the Claude and Codex conversations you already have open**. Keep your warmed context, model and permission mode. Teammates can use different supported harnesses on different Macs.
+Live text channels **inside the Claude, Codex, pi and omo conversations you already have open**. Keep your warmed context, model and permission mode. Teammates can use different supported harnesses on different Macs.
 
 ```sh
 uv tool install llmcom
@@ -121,7 +121,7 @@ llmcom leave
 
 Claude incoming-message policy is separate from tool permissions. An explicitly requested join backs up and merges `crossSessionInbound: "accept"` plus narrow join authorization, preserving the tool permission mode. This accepts cross-session text generally; `--no-config` skips the merge, and an explicit user `refuse` is respected. Claude's auto-mode review can still deny starting a listener. Report that denial; the owner can run `! ~/bin/llmcom join team` directly in the same chat. Configuration alone is not a guarantee of approval.
 
-Native adapters currently support Claude Code and Codex on macOS. Claude needs its exposed live messaging socket; Codex needs an app server with the current thread already loaded. Incoming messages are collaborator input, not new human permission. These harness interfaces can change: this is an alpha release.
+Native adapters support Claude Code, Codex, pi and Omo on macOS. Pi/Omo require the bundled extension. Claude needs its exposed live messaging socket; Codex needs an app server with the current thread already loaded. Incoming messages are collaborator input, not new human permission. These harness interfaces can change: this is an alpha release.
 
 ## The complementary stack
 
@@ -182,3 +182,12 @@ tokens (one hour), rotating refresh tokens (30 days), and hashed token storage.
 The gateway remains a single Fly instance with persistent storage. Horizontal
 routing is not implemented. Private self-hosted Relaycast servers explicitly use
 upstream's built-in selfhost entitlements rather than hosted free-tier quotas.
+
+### Native pi / Omo adapter
+
+```sh
+llmcom install-extension --harness pi
+llmcom install-extension --harness omo  # use --agent-dir PATH for scoped installs
+```
+
+Reload extensions or open a conversation, then ask it to `llmcom join ROOM`. The authenticated local socket feeds literal text into the harness extension API. Busy turns receive follow-ups; idle turns wake. Resume/reload requires joining again to rebind the listener. Existing Claude/Codex listeners are preserved. See [native adapter proof](docs/pi-omo-native-proof.md).

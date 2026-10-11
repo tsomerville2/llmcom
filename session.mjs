@@ -4,10 +4,11 @@ import net from 'node:net';
 import { spawn, execFileSync } from 'node:child_process';
 import { RelayCast } from '@relaycast/sdk';
 import { configDir, stateDir, stackDir, readConfig, credentials, privateJson } from './runtime.mjs';
+import { deliverPi } from './pi-bridge.mjs';
 import { discoverCodexSocket, deliverCodex } from './codex-session.mjs';
 
 export function currentSession() {
-  return process.env.CODEX_THREAD_ID || process.env.CLAUDE_CODE_SESSION_ID;
+  return process.env.LLMCOM_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CLAUDE_CODE_SESSION_ID;
 }
 export function sessionIdentity() {
   const id = currentSession();
@@ -63,8 +64,8 @@ export async function joinSession(name, vendor, options = {}) {
 }
 async function joinSessionLocked(name, vendor, options) {
   if (!/^[a-zA-Z0-9_-]{1,64}$/.test(name || '')) throw new Error('Usage: awstack join <unique-name> [codex|claude]');
-  vendor ||= process.env.CODEX_THREAD_ID ? 'codex' : 'claude';
-  const id = vendor === 'codex' ? process.env.CODEX_THREAD_ID : process.env.CLAUDE_CODE_SESSION_ID;
+  vendor ||= process.env.LLMCOM_VENDOR || (process.env.CODEX_THREAD_ID ? 'codex' : 'claude');
+  const id = ['pi', 'omo'].includes(vendor) ? process.env.LLMCOM_SESSION_ID : vendor === 'codex' ? process.env.CODEX_THREAD_ID : process.env.CLAUDE_CODE_SESSION_ID;
   if (!id || !/^[\w-]+$/.test(id)) throw new Error('Run join through the tool inside the warmed conversation.');
   assertUniqueName(name, id);
   const file = path.join(configDir, 'sessions', `${id}.json`);
@@ -104,11 +105,12 @@ async function joinSessionLocked(name, vendor, options) {
     }
     // Restart dead, disconnected or legacy sidecars using this chat's current address.
   }
-  const door = vendor === 'codex' ? { thread: id, socket: await discoverCodexSocket(id) } : {
+  const door = ['pi', 'omo'].includes(vendor) ? { socket: process.env.LLMCOM_SOCKET, token: process.env.LLMCOM_TOKEN, sessionId: id } : vendor === 'codex' ? { thread: id, socket: await discoverCodexSocket(id) } : {
     socket: process.env.CLAUDE_CODE_MESSAGING_SOCKET, token: process.env.CLAUDE_CODE_MESSAGING_TOKEN,
   };
   if (vendor === 'claude' && (!door.socket || !door.token)) throw new Error('This Claude version does not expose its live messaging socket.');
-  if (!['codex', 'claude'].includes(vendor)) throw new Error('Vendor must be codex or claude.');
+  if (!['codex', 'claude', 'pi', 'omo'].includes(vendor)) throw new Error('Vendor must be codex, claude, pi or omo.');
+  if (['pi', 'omo'].includes(vendor) && (!door.socket || !door.token || !fs.existsSync(door.socket))) throw new Error('Load the LLMCom pi/omo extension and join from this conversation.');
   const config = readConfig();
   const secret = credentials();
   if (!secret.agents[name]) {
@@ -152,6 +154,7 @@ export function channelInput(event, session, ownId) {
 }
 
 async function submit(session, text) {
+  if (['pi', 'omo'].includes(session.vendor)) return deliverPi(session.door, text);
   if (session.vendor === 'claude') {
     await new Promise((resolve, reject) => {
       const socket = net.createConnection(session.door.socket);

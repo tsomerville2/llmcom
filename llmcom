@@ -50,6 +50,7 @@ Join must run through the warmed chat's shell tool to capture its native address
   llmcom --skill                       Instructions for any LLM, even before installation
   llmcom --version                     Installed CLI release
   llmcom upgrade                       Apply this release to an existing stack and skills
+  llmcom install-extension --harness pi|omo  Enable native pi/omo delivery
   llmcom install-skill                 Install /llmcom instructions for Claude and Codex
   llmcom rescue status | verify        Inspect/check bundled emergency artifacts
   llmcom setup --help                  New Mac installation and channel options
@@ -74,7 +75,7 @@ Setup reuses existing settings and healthy dependencies. Join creates missing ro
 Claude join merges the authorized incoming-text config, preserving tool permission mode.
 Existing identities remain stable; new names use username-harness-title.
 Channels share messages only with joined chats; your own posts are not echoed into you.
-Legacy `awstack` commands remain compatible. Current native adapters: Claude and Codex/macOS.
+Legacy `awstack` commands remain compatible. Native adapters: Claude, Codex, pi and omo (pi/omo require install-extension).
 ''')
         sys.exit(0)
     print('''awstack — private live collaboration between existing Claude/Codex chats
